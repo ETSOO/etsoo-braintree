@@ -98,6 +98,7 @@ async function createCard(
     keys.forEach((key) => {
       const selector = `#${key}`;
       const keyField = form.querySelector(selector) as HTMLInputElement;
+      console.log(selector, keyField);
       if (keyField) {
         const field: HostedFieldsField = { selector };
         fields[key] = field;
@@ -112,7 +113,7 @@ async function createCard(
         fields
       })
       .then(
-        (fields) => {
+        (hFields) => {
           const submitButton = form.querySelector<HTMLButtonElement>(
             'button[type="submit"]'
           );
@@ -121,7 +122,7 @@ async function createCard(
 
             if (submitButton) submitButton.disabled = true;
 
-            fields.tokenize({ billingAddress, vault }, (err, payload) => {
+            hFields.tokenize({ billingAddress, vault }, (err, payload) => {
               console.log(err, payload);
 
               if (submitButton) submitButton.disabled = false;
