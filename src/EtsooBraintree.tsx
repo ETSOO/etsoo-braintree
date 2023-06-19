@@ -9,11 +9,31 @@ import React from "react";
 import { GooglePayOptions } from "./methods/GooglePayOptions";
 import { CardOptions } from "./methods/CardOptions";
 import { EnvironmentType } from "./data/EnvironmentType";
-import { PaymentMethods } from "./data/PaymentMethods";
+import { PaymentMethod, PaymentMethods } from "./data/PaymentMethods";
 import { PaymentAmount } from "./data/PaymentAmount";
 import { HostedFieldsField } from "braintree-web/modules/hosted-fields";
 import { HostedFieldFieldType } from "./data/HostedFieldFieldType";
+import { PaymentPayload } from "./data/PaymentPayload";
 
+/**
+ * Etsoo Braintree Payment Error type
+ */
+export type EtsooBraintreePaymentError = (
+  method: PaymentMethod,
+  reason: unknown
+) => void;
+
+/**
+ * Etsoo Braintree Error type
+ */
+export type EtsooBraintreeError = (
+  method: PaymentMethod | undefined,
+  reason: unknown
+) => void;
+
+/**
+ * ETSOO Braintree props
+ */
 export type EtsooBraintreePros = {
   /**
    * Amount
@@ -48,7 +68,7 @@ export type EtsooBraintreePros = {
   /**
    * Error handling
    */
-  onError?: (reason: unknown) => void;
+  onError?: EtsooBraintreeError;
 
   /**
    * Loading callback
@@ -56,34 +76,50 @@ export type EtsooBraintreePros = {
   onLoading?: () => React.ReactNode;
 
   /**
+   * Payment error callback
+   */
+  onPaymentError?: EtsooBraintreePaymentError;
+
+  /**
+   * Payment requestable callback
+   */
+  onPaymentRequestable?: (payload: PaymentPayload) => void;
+
+  /**
    * Teardown callback
    */
   onTeardown?: () => void;
 };
 
-function loadGooglePayScript() {
-  return new Promise<void>((resolve, reject) => {
-    const script = document.createElement("script");
-    script.src = "https://pay.google.com/gp/p/js/pay.js";
-    script.async = true;
-    script.onerror = (err) => {
-      reject(err);
-    };
-    script.onload = () => {
-      resolve();
-    };
-    document.head.appendChild(script);
-  });
+function disableElement(element: HTMLElement, disabled: boolean = true) {
+  if (disabled) element.setAttribute("disabled", "disabled");
+  else element.removeAttribute("disabled");
 }
 
 async function createCard(
   clientInstance: Client,
-  card: CardOptions
-): Promise<React.RefCallback<HTMLFormElement>> {
+  card: CardOptions,
+  onPaymentError?: EtsooBraintreePaymentError,
+  onPaymentRequestable?: (payload: PaymentPayload) => void
+): Promise<React.RefCallback<HTMLElement>> {
   const { billingAddress, fieldSetup, styles, vault } = card;
 
-  return (form) => {
-    if (form == null) return;
+  let currentContainer: HTMLElement;
+
+  return (container) => {
+    if (container == null) return;
+
+    console.log(
+      "Card payment",
+      currentContainer,
+      currentContainer == container
+    );
+    currentContainer = container;
+
+    const submit = container.querySelector<HTMLElement>(
+      '[type="submit"], #submit'
+    );
+    if (submit == null) return;
 
     const fields: HostedFieldFieldOptions = {};
     const keys: HostedFieldFieldType[] = [
@@ -97,7 +133,7 @@ async function createCard(
     ];
     keys.forEach((key) => {
       const selector = `#${key}`;
-      const keyField = form.querySelector<HTMLDivElement>(selector);
+      const keyField = container.querySelector<HTMLElement>(selector);
       if (keyField) {
         const field: HostedFieldsField = { selector };
         fields[key] = field;
@@ -113,18 +149,19 @@ async function createCard(
       })
       .then(
         (hFields) => {
-          const submitButton = form.querySelector<HTMLButtonElement>(
-            'button[type="submit"]'
-          );
-          form.addEventListener("submit", (event) => {
+          submit.addEventListener("click", (event) => {
             event.preventDefault();
 
-            if (submitButton) submitButton.disabled = true;
+            disableElement(submit);
 
             hFields.tokenize({ billingAddress, vault }, (err, payload) => {
-              console.log(err, payload);
+              if (payload) {
+                if (onPaymentRequestable) onPaymentRequestable(payload);
+              } else if (onPaymentError) {
+                onPaymentError("card", err ?? new Error("Unknown"));
+              }
 
-              if (submitButton) submitButton.disabled = false;
+              disableElement(submit, false);
             });
           });
         },
@@ -135,27 +172,55 @@ async function createCard(
   };
 }
 
+function loadGooglePayScript() {
+  console.log(
+    "google.payments.api.PaymentsClient",
+    typeof google.payments.api.PaymentsClient
+  );
+
+  if (typeof google.payments.api.PaymentsClient != "undefined")
+    return Promise.resolve();
+
+  return new Promise<void>((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "https://pay.google.com/gp/p/js/pay.js";
+    script.async = true;
+    script.onerror = (err) => {
+      reject(err);
+    };
+    script.onload = () => {
+      resolve();
+    };
+    document.head.appendChild(script);
+  });
+}
+
 async function createGooglePay(
   clientInstance: Client,
   googlePay: GooglePayOptions,
   environment: EnvironmentType,
-  amount: PaymentAmount
+  amount: PaymentAmount,
+  onPaymentError?: EtsooBraintreePaymentError,
+  onPaymentRequestable?: (payload: PaymentPayload) => void
 ): Promise<React.RefCallback<HTMLElement> | undefined> {
-  // Load script
+  // Load google payment script
   await loadGooglePayScript();
 
   const { merchantId, totalPriceStatus = "FINAL", version = 2 } = googlePay;
 
+  // Google payment instance
   const paymentInstance = await googlePayment.create({
     client: clientInstance,
     googlePayVersion: version,
     googleMerchantId: merchantId
   });
 
+  // Google payment client
   const paymentClient = new google.payments.api.PaymentsClient({
     environment
   });
 
+  // Google payment request
   const request = await paymentInstance.createPaymentDataRequest({
     transactionInfo: {
       currencyCode: amount.currency,
@@ -164,6 +229,7 @@ async function createGooglePay(
     }
   });
 
+  // Google payment isReadyToPay response
   const response = await paymentClient.isReadyToPay({
     apiVersion: version,
     apiVersionMinor: 0,
@@ -171,21 +237,43 @@ async function createGooglePay(
     existingPaymentMethodRequired: true
   });
   if (response.result) {
+    let currentButton: HTMLElement;
     return (button) => {
       if (button == null) return;
+
+      console.log("Google payment", currentButton, currentButton == button);
+      currentButton = button;
+
       button.addEventListener("click", async (event) => {
         event.preventDefault();
 
-        const paymentData = await paymentClient.loadPaymentData(request);
-        const paymentResponse = await paymentInstance.parseResponse(
-          paymentData
-        );
-        console.log(paymentResponse);
+        disableElement(button);
+
+        try {
+          // Load payment data
+          const paymentData = await paymentClient.loadPaymentData(request);
+
+          // Parse payment data response
+          const paymentResponse = await paymentInstance.parseResponse(
+            paymentData
+          );
+
+          if (onPaymentRequestable) onPaymentRequestable(paymentResponse);
+        } catch (ex) {
+          if (onPaymentError) onPaymentError("googlePay", ex);
+        }
+
+        disableElement(button, false);
       });
     };
   }
 }
 
+/**
+ * Etsoo Braintree UI component
+ * @param props Props
+ * @returns Component
+ */
 export function EtsooBraintree(props: EtsooBraintreePros) {
   // Destruct
   const {
@@ -197,6 +285,8 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
     googlePay,
     onError = (reason) => console.log(reason),
     onLoading = () => "...",
+    onPaymentError,
+    onPaymentRequestable,
     onTeardown = () => console.log("Teardown")
   } = props;
 
@@ -215,10 +305,15 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
 
         if (card) {
           try {
-            const cardRef = await createCard(clientInstance, card);
+            const cardRef = await createCard(
+              clientInstance,
+              card,
+              onPaymentError,
+              onPaymentRequestable
+            );
             items.card = cardRef;
           } catch (error) {
-            onError({ type: "card", error });
+            onError("card", error);
           }
         }
 
@@ -228,19 +323,21 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
               clientInstance,
               googlePay,
               environment,
-              amount
+              amount,
+              onPaymentError,
+              onPaymentRequestable
             );
 
             if (googlePayRef == null) {
-              onError({
-                type: "googlePay",
-                message: "GooglePay API isReadyToPay failed"
-              });
+              onError(
+                "googlePay",
+                new Error("GooglePay API isReadyToPay failed")
+              );
             } else {
               items.googlePay = googlePayRef;
             }
           } catch (error) {
-            onError({ type: "googlePay", error });
+            onError("googlePay", error);
           }
         }
 
@@ -248,7 +345,7 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
         setMethods(items);
       },
       (reason) => {
-        onError(reason);
+        onError(undefined, reason);
       }
     );
 
@@ -258,9 +355,10 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
     };
   }, [authorization]);
 
-  return (
-    <React.Fragment>
-      {methods == null ? onLoading() : children(methods, amount)}
-    </React.Fragment>
+  const childrenUI = React.useMemo(
+    () => (methods == null ? onLoading() : children(methods, amount)),
+    [methods, amount, onLoading]
   );
+
+  return <React.Fragment>{childrenUI}</React.Fragment>;
 }

@@ -4,7 +4,7 @@ export type CardOptions = {
   billingAddress?: any;
   fieldSetup?: (
     key: string,
-    elment: HTMLDivElement,
+    elment: HTMLElement,
     field: HostedFieldsField
   ) => void;
   styles?: any;

@@ -2,7 +2,7 @@
  * Payment methods for UI renderer
  */
 export type PaymentMethods = {
-  card?: React.RefCallback<HTMLFormElement>;
+  card?: React.RefCallback<HTMLElement>;
   googlePay?: React.RefCallback<HTMLElement>;
 };
 
