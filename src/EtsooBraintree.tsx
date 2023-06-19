@@ -79,14 +79,22 @@ function loadGooglePayScript() {
 async function createCard(
   clientInstance: Client,
   card: CardOptions
-): Promise<React.RefCallback<HTMLFormElement> | undefined> {
-  const { fieldSetup, styles } = card;
+): Promise<React.RefCallback<HTMLFormElement>> {
+  const { billingAddress, fieldSetup, styles, vault } = card;
 
   return (form) => {
     if (form == null) return;
 
     const fields: HostedFieldFieldOptions = {};
-    const keys: HostedFieldFieldType[] = ["cardholderName"];
+    const keys: HostedFieldFieldType[] = [
+      "cardholderName",
+      "cvv",
+      "expirationDate",
+      "expirationMonth",
+      "expirationYear",
+      "number",
+      "postalCode"
+    ];
     keys.forEach((key) => {
       const selector = `#${key}`;
       const keyField = form.querySelector(selector) as HTMLInputElement;
@@ -103,15 +111,27 @@ async function createCard(
         styles,
         fields
       })
-      .then((fields) => {
-        form.addEventListener("submit", (event) => {
-          event.preventDefault();
+      .then(
+        (fields) => {
+          const submitButton = form.querySelector<HTMLButtonElement>(
+            'button[type="submit"]'
+          );
+          form.addEventListener("submit", (event) => {
+            event.preventDefault();
 
-          fields.tokenize((err, payload) => {
-            console.log(err, payload);
+            if (submitButton) submitButton.disabled = true;
+
+            fields.tokenize({ billingAddress, vault }, (err, payload) => {
+              console.log(err, payload);
+
+              if (submitButton) submitButton.disabled = false;
+            });
           });
-        });
-      });
+        },
+        (reason) => {
+          throw reason;
+        }
+      );
   };
 }
 
@@ -196,15 +216,7 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
         if (card) {
           try {
             const cardRef = await createCard(clientInstance, card);
-
-            if (cardRef == null) {
-              onError({
-                type: "card",
-                message: "GooglePay API isReadyToPay failed"
-              });
-            } else {
-              items.card = cardRef;
-            }
+            items.card = cardRef;
           } catch (error) {
             onError({ type: "card", error });
           }
