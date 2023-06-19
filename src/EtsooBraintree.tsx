@@ -97,8 +97,7 @@ async function createCard(
     ];
     keys.forEach((key) => {
       const selector = `#${key}`;
-      const keyField = form.querySelector(selector) as HTMLInputElement;
-      console.log(selector, keyField);
+      const keyField = form.querySelector<HTMLDivElement>(selector);
       if (keyField) {
         const field: HostedFieldsField = { selector };
         fields[key] = field;
