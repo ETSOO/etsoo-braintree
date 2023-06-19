@@ -1,0 +1,67 @@
+{
+  "name": "@etsoo/braintree",
+  "version": "1.0.1",
+  "description": "React components for Braintree",
+  "main": "lib/cjs/index.js",
+  "module": "lib/mjs/index.js",
+  "types": "lib/mjs/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./lib/mjs/index.js",
+      "require": "./lib/cjs/index.js"
+    }
+  },
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig.cjs.json",
+    "test": "jest"
+  },
+  "jest": {
+    "automock": false,
+    "testMatch": [
+      "<rootDir>/__tests__/**/*.{ts,tsx}"
+    ],
+    "testEnvironment": "jsdom",
+    "moduleFileExtensions": [
+      "js",
+      "ts",
+      "tsx",
+      "d.ts"
+    ],
+    "transform": {
+      ".+\\.tsx?$": "ts-jest"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ETSOO/etsoo-braintree.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ETSOO/etsoo-braintree/issues"
+  },
+  "homepage": "https://github.com/ETSOO/etsoo-braintree#readme",
+  "keywords": [
+    "React",
+    "Braintree",
+    "TypeScript"
+  ],
+  "author": "GarryXiao",
+  "license": "MIT",
+  "devDependencies": {
+    "@testing-library/react": "^13.4.0",
+    "@types/braintree-web": "^3.75.23",
+    "@types/googlepay": "^0.7.0",
+    "@types/jest": "^28.1.8",
+    "@types/react": "^18.0.25",
+    "@types/react-dom": "^18.0.9",
+    "jest": "^28.1.3",
+    "jest-environment-jsdom": "^28.1.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "ts-jest": "^28.0.8",
+    "typescript": "^4.7.4"
+  },
+  "dependencies": {
+    "braintree-web": "^3.95.0-beta-3ds.1"
+  }
+}
