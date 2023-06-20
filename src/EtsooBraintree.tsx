@@ -307,7 +307,7 @@ async function createPaypal(
               amount: amount.total, // Required
               currency: amount.currency, // Required, must match the currency passed in with loadPayPalSDK
 
-              intent: paypal.Intent.Capture, // Must match the intent passed in with loadPayPalSDK
+              intent: intent as paypal.Intent, // Must match the intent passed in with loadPayPalSDK
 
               enableShippingAddress: true,
               shippingAddressEditable: true
