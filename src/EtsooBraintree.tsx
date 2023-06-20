@@ -268,7 +268,7 @@ async function createPaypal(
 ): Promise<React.RefCallback<HTMLElement>> {
   const {
     buttonStyle,
-    debug,
+    debug = false,
     merchantAccountId,
     intent = "capture",
     vault = false
@@ -296,14 +296,14 @@ async function createPaypal(
     if (container.id === "") container.id = "paypal-container";
 
     try {
-      const flow = vault ? paypal.FlowType.Vault : paypal.FlowType.Checkout;
+      const flow = vault ? "vault" : "checkout";
       paypal
         .Buttons({
           style: buttonStyle,
           fundingSource: "paypal",
           createOrder() {
             return payInstance.createPayment({
-              flow, // Required
+              flow: flow as paypal.FlowType, // Required
               amount: amount.total, // Required
               currency: amount.currency, // Required, must match the currency passed in with loadPayPalSDK
 
