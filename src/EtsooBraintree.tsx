@@ -290,6 +290,8 @@ async function createPaypal(
   return (button) => {
     if (button == null) return;
 
+    if (button.id === "") button.id = "paypal-container";
+
     try {
       paypal
         .Buttons({
