@@ -4,6 +4,7 @@
 export type PaymentMethods = {
   card?: React.RefCallback<HTMLElement>;
   googlePay?: React.RefCallback<HTMLElement>;
+  paypal?: React.RefCallback<HTMLElement>;
 };
 
 /**

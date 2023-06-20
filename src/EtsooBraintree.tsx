@@ -3,7 +3,8 @@ import {
   HostedFieldFieldOptions,
   client,
   googlePayment,
-  hostedFields
+  hostedFields,
+  paypalCheckout
 } from "braintree-web";
 import React from "react";
 import { GooglePayOptions } from "./methods/GooglePayOptions";
@@ -14,6 +15,8 @@ import { PaymentAmount } from "./data/PaymentAmount";
 import { HostedFieldsField } from "braintree-web/modules/hosted-fields";
 import { HostedFieldFieldType } from "./data/HostedFieldFieldType";
 import { PaymentPayload } from "./data/PaymentPayload";
+import { PaypalOptions } from "./methods/PaypalOptions";
+import paypal, { FlowType } from "paypal-checkout-components";
 
 /**
  * Etsoo Braintree Payment Error type
@@ -46,11 +49,6 @@ export type EtsooBraintreePros = {
   authorization: string;
 
   /**
-   * Card payment
-   */
-  card?: CardOptions;
-
-  /**
    * Children renderer
    */
   children: (methods: PaymentMethods, amount: PaymentAmount) => React.ReactNode;
@@ -61,9 +59,19 @@ export type EtsooBraintreePros = {
   environment?: EnvironmentType;
 
   /**
+   * Card payment
+   */
+  card?: CardOptions;
+
+  /**
    * Google pay
    */
   googlePay?: GooglePayOptions;
+
+  /**
+   * Paypal
+   */
+  paypal?: PaypalOptions;
 
   /**
    * Error handling
@@ -98,23 +106,14 @@ function disableElement(element: HTMLElement, disabled: boolean = true) {
 
 async function createCard(
   clientInstance: Client,
-  card: CardOptions,
+  options: CardOptions,
   onPaymentError?: EtsooBraintreePaymentError,
   onPaymentRequestable?: (payload: PaymentPayload) => void
 ): Promise<React.RefCallback<HTMLElement>> {
-  const { billingAddress, fieldSetup, styles, vault } = card;
-
-  let currentContainer: HTMLElement;
+  const { billingAddress, fieldSetup, styles, vault } = options;
 
   return (container) => {
     if (container == null) return;
-
-    console.log(
-      "Card payment",
-      currentContainer,
-      currentContainer == container
-    );
-    currentContainer = container;
 
     const submit = container.querySelector<HTMLElement>(
       '[type="submit"], #submit'
@@ -173,13 +172,7 @@ async function createCard(
 }
 
 function loadGooglePayScript() {
-  console.log(
-    "google.payments.api.PaymentsClient",
-    typeof google.payments.api.PaymentsClient
-  );
-
-  if (typeof google.payments.api.PaymentsClient != "undefined")
-    return Promise.resolve();
+  if (google?.payments?.api?.PaymentsClient) return Promise.resolve();
 
   return new Promise<void>((resolve, reject) => {
     const script = document.createElement("script");
@@ -197,7 +190,7 @@ function loadGooglePayScript() {
 
 async function createGooglePay(
   clientInstance: Client,
-  googlePay: GooglePayOptions,
+  options: GooglePayOptions,
   environment: EnvironmentType,
   amount: PaymentAmount,
   onPaymentError?: EtsooBraintreePaymentError,
@@ -206,7 +199,7 @@ async function createGooglePay(
   // Load google payment script
   await loadGooglePayScript();
 
-  const { merchantId, totalPriceStatus = "FINAL", version = 2 } = googlePay;
+  const { merchantId, totalPriceStatus = "FINAL", version = 2 } = options;
 
   // Google payment instance
   const paymentInstance = await googlePayment.create({
@@ -237,12 +230,8 @@ async function createGooglePay(
     existingPaymentMethodRequired: true
   });
   if (response.result) {
-    let currentButton: HTMLElement;
     return (button) => {
       if (button == null) return;
-
-      console.log("Google payment", currentButton, currentButton == button);
-      currentButton = button;
 
       button.addEventListener("click", async (event) => {
         event.preventDefault();
@@ -269,6 +258,77 @@ async function createGooglePay(
   }
 }
 
+async function createPaypal(
+  clientInstance: Client,
+  options: PaypalOptions,
+  environment: EnvironmentType,
+  amount: PaymentAmount,
+  onPaymentError?: EtsooBraintreePaymentError,
+  onPaymentRequestable?: (payload: PaymentPayload) => void
+): Promise<React.RefCallback<HTMLElement>> {
+  const {
+    buttonStyle,
+    fundingSource = "PAYPAL",
+    merchantAccountId,
+    intent = paypal.Intent.Capture
+  } = options;
+
+  const payInstance = await paypalCheckout.create({
+    client: clientInstance,
+    merchantAccountId
+  });
+
+  await payInstance.loadPayPalSDK({
+    currency: amount.currency,
+    intent: "sale"
+  });
+
+  return (button) => {
+    if (button == null) return;
+
+    try {
+      paypal
+        .Buttons({
+          style: buttonStyle,
+          fundingSource: fundingSource,
+          createOrder() {
+            return payInstance.createPayment({
+              flow: FlowType.Checkout, // Required
+              amount: amount.total, // Required
+              currency: amount.currency, // Required, must match the currency passed in with loadPayPalSDK
+
+              intent, // Must match the intent passed in with loadPayPalSDK
+
+              enableShippingAddress: true,
+              shippingAddressEditable: true
+            });
+          },
+          onApprove(data, actions) {
+            return payInstance.tokenizePayment(data).then(
+              (payload) => {
+                if (onPaymentRequestable) onPaymentRequestable(payload);
+                return payload;
+              },
+              (reason) => {
+                if (onPaymentError) onPaymentError("paypal", reason);
+                return {} as paypal.AuthorizationResponse;
+              }
+            );
+          },
+          onCancel(data) {
+            console.log("PayPal payment cancelled", data);
+          },
+          onError(err) {
+            if (onPaymentError) onPaymentError("paypal", err);
+          }
+        })
+        .render(`#${button.id}`);
+    } catch (ex) {
+      if (onPaymentError) onPaymentError("googlePay", ex);
+    }
+  };
+}
+
 /**
  * Etsoo Braintree UI component
  * @param props Props
@@ -279,10 +339,13 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
   const {
     amount,
     authorization,
-    card,
     children,
     environment = "TEST",
+
+    card,
     googlePay,
+    paypal,
+
     onError = (reason) => console.log(reason),
     onLoading = () => "...",
     onPaymentError,
@@ -338,6 +401,22 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
             }
           } catch (error) {
             onError("googlePay", error);
+          }
+        }
+
+        if (paypal) {
+          try {
+            const paypalRef = await createPaypal(
+              clientInstance,
+              paypal,
+              environment,
+              amount,
+              onPaymentError,
+              onPaymentRequestable
+            );
+            items.paypal = paypalRef;
+          } catch (error) {
+            onError("paypal", error);
           }
         }
 

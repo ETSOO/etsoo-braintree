@@ -5,4 +5,5 @@ import {
 
 export type PaymentPayload =
   | GooglePaymentTokenizePayload
-  | HostedFieldsTokenizePayload;
+  | HostedFieldsTokenizePayload
+  | paypal.AuthorizationResponse;
