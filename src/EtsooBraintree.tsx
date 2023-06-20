@@ -268,9 +268,10 @@ async function createPaypal(
 ): Promise<React.RefCallback<HTMLElement>> {
   const {
     buttonStyle,
-    fundingSources = ["paypal"],
+    debug,
     merchantAccountId,
-    intent = "capture"
+    intent = "capture",
+    vault = false
   } = options;
 
   const payInstance = await paypalCheckout.create({
@@ -278,27 +279,31 @@ async function createPaypal(
     merchantAccountId
   });
 
+  // Enable or disable funding resources within the portal site
+  // Not in configuration
   await payInstance.loadPayPalSDK({
     currency: amount.currency,
     intent,
-    "enable-funding": fundingSources.join(","),
-    debug: environment === "TEST"
+    debug,
+    vault
   });
 
   const paypal = globalThis.paypal;
 
-  return (button) => {
-    if (button == null) return;
+  return (container) => {
+    if (container == null) return;
 
-    if (button.id === "") button.id = "paypal-container";
+    if (container.id === "") container.id = "paypal-container";
 
     try {
+      const flow = vault ? paypal.FlowType.Vault : paypal.FlowType.Checkout;
       paypal
         .Buttons({
           style: buttonStyle,
+          fundingSource: "paypal",
           createOrder() {
             return payInstance.createPayment({
-              flow: paypal.FlowType.Checkout, // Required
+              flow, // Required
               amount: amount.total, // Required
               currency: amount.currency, // Required, must match the currency passed in with loadPayPalSDK
 
@@ -327,7 +332,7 @@ async function createPaypal(
             if (onPaymentError) onPaymentError("paypal", err);
           }
         })
-        .render(`#${button.id}`);
+        .render(`#${container.id}`);
     } catch (ex) {
       if (onPaymentError) onPaymentError("paypal", ex);
     }
