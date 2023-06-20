@@ -268,7 +268,8 @@ async function createPaypal(
 ): Promise<React.RefCallback<HTMLElement>> {
   const {
     buttonStyle,
-    fundingSource = "PAYPAL",
+    fundingSources = ["PAYPAL"],
+    locale,
     merchantAccountId,
     intent = "capture"
   } = options;
@@ -280,7 +281,10 @@ async function createPaypal(
 
   await payInstance.loadPayPalSDK({
     currency: amount.currency,
-    intent
+    intent,
+    locale,
+    "enable-funding": fundingSources.join(","),
+    debug: environment === "TEST"
   });
 
   const paypal = globalThis.paypal;
@@ -292,7 +296,6 @@ async function createPaypal(
       paypal
         .Buttons({
           style: buttonStyle,
-          fundingSource: fundingSource,
           createOrder() {
             return payInstance.createPayment({
               flow: paypal.FlowType.Checkout, // Required
@@ -326,7 +329,7 @@ async function createPaypal(
         })
         .render(`#${button.id}`);
     } catch (ex) {
-      if (onPaymentError) onPaymentError("googlePay", ex);
+      if (onPaymentError) onPaymentError("paypal", ex);
     }
   };
 }

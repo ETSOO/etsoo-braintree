@@ -1,6 +1,6 @@
 {
   "name": "@etsoo/braintree",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "React components for Braintree",
   "main": "lib/cjs/index.js",
   "module": "lib/mjs/index.js",
@@ -45,7 +45,7 @@
     "Braintree",
     "TypeScript"
   ],
-  "author": "GarryXiao",
+  "author": "Garry Xiao, IllionDTS Web Team",
   "license": "MIT",
   "devDependencies": {
     "@testing-library/react": "^14.0.0",

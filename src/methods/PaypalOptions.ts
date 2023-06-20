@@ -1,6 +1,14 @@
+export type PaypalFundingResurce =
+  | "CREDIT"
+  | "CARD"
+  | "VENMO"
+  | "PAYLATER"
+  | "PAYPAL";
+
 export type PaypalOptions = {
   buttonStyle?: any;
-  fundingSource?: "CREDIT" | "CARD" | "VENMO" | "ELV" | "PAYPAL";
+  fundingSources?: PaypalFundingResurce[];
   intent?: "authorize" | "capture" | "sale" | "tokenize";
+  locale?: string;
   merchantAccountId?: string;
 };
