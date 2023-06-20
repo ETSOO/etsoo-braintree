@@ -268,8 +268,7 @@ async function createPaypal(
 ): Promise<React.RefCallback<HTMLElement>> {
   const {
     buttonStyle,
-    fundingSources = ["PAYPAL"],
-    locale,
+    fundingSources = ["paypal"],
     merchantAccountId,
     intent = "capture"
   } = options;
@@ -282,7 +281,6 @@ async function createPaypal(
   await payInstance.loadPayPalSDK({
     currency: amount.currency,
     intent,
-    locale,
     "enable-funding": fundingSources.join(","),
     debug: environment === "TEST"
   });
