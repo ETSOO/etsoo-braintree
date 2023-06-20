@@ -1,6 +1,6 @@
 export type PaypalOptions = {
   buttonStyle?: any;
   fundingSource?: "CREDIT" | "CARD" | "VENMO" | "ELV" | "PAYPAL";
-  intent?: paypal.Intent;
+  intent?: "authorize" | "capture" | "sale" | "tokenize";
   merchantAccountId?: string;
 };

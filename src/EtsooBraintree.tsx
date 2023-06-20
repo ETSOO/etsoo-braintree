@@ -16,7 +16,6 @@ import { HostedFieldsField } from "braintree-web/modules/hosted-fields";
 import { HostedFieldFieldType } from "./data/HostedFieldFieldType";
 import { PaymentPayload } from "./data/PaymentPayload";
 import { PaypalOptions } from "./methods/PaypalOptions";
-import paypal, { FlowType } from "paypal-checkout-components";
 
 /**
  * Etsoo Braintree Payment Error type
@@ -270,7 +269,7 @@ async function createPaypal(
     buttonStyle,
     fundingSource = "PAYPAL",
     merchantAccountId,
-    intent = paypal.Intent.Capture
+    intent = "capture"
   } = options;
 
   const payInstance = await paypalCheckout.create({
@@ -280,8 +279,10 @@ async function createPaypal(
 
   await payInstance.loadPayPalSDK({
     currency: amount.currency,
-    intent: "sale"
+    intent
   });
+
+  const paypal = globalThis.paypal;
 
   return (button) => {
     if (button == null) return;
@@ -293,11 +294,11 @@ async function createPaypal(
           fundingSource: fundingSource,
           createOrder() {
             return payInstance.createPayment({
-              flow: FlowType.Checkout, // Required
+              flow: paypal.FlowType.Checkout, // Required
               amount: amount.total, // Required
               currency: amount.currency, // Required, must match the currency passed in with loadPayPalSDK
 
-              intent, // Must match the intent passed in with loadPayPalSDK
+              intent: paypal.Intent.Capture, // Must match the intent passed in with loadPayPalSDK
 
               enableShippingAddress: true,
               shippingAddressEditable: true
