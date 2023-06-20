@@ -171,7 +171,8 @@ async function createCard(
 }
 
 function loadGooglePayScript() {
-  if (google?.payments?.api?.PaymentsClient) return Promise.resolve();
+  if (typeof google != "undefined" && google?.payments?.api?.PaymentsClient)
+    return Promise.resolve();
 
   return new Promise<void>((resolve, reject) => {
     const script = document.createElement("script");
