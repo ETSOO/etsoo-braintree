@@ -1,9 +1,11 @@
 import {
   Client,
   HostedFieldFieldOptions,
+  LocalPaymentTypes,
   client,
   googlePayment,
   hostedFields,
+  localPayment,
   paypalCheckout
 } from "braintree-web";
 import React from "react";
@@ -16,6 +18,8 @@ import { HostedFieldsField } from "braintree-web/modules/hosted-fields";
 import { HostedFieldFieldType } from "./data/HostedFieldFieldType";
 import { PaymentPayload } from "./data/PaymentPayload";
 import { PaypalOptions } from "./methods/PaypalOptions";
+import { AlipayOptions } from "./methods/AlipayOptions";
+import { LocalPaymentOptions } from "./methods/LocalPaymentOptions";
 
 /**
  * Etsoo Braintree Payment Error type
@@ -56,6 +60,11 @@ export type EtsooBraintreePros = {
    * Environment
    */
   environment?: EnvironmentType;
+
+  /**
+   * Alipay
+   */
+  alipay?: AlipayOptions;
 
   /**
    * Card payment
@@ -339,6 +348,68 @@ async function createPaypal(
   };
 }
 
+async function createLocalPayment(
+  clientInstance: Client,
+  options: LocalPaymentOptions,
+  environment: EnvironmentType,
+  amount: PaymentAmount,
+  onPaymentError?: EtsooBraintreePaymentError,
+  onPaymentRequestable?: (payload: PaymentPayload) => void
+): Promise<React.RefCallback<HTMLElement>> {
+  const { countryCode, fallback, merchantAccountId, method, onPaymentStart } =
+    options;
+
+  const localPaymentInstance = await localPayment.create({
+    client: clientInstance,
+    merchantAccountId
+  });
+
+  return (button) => {
+    if (button == null) return;
+
+    button.addEventListener("click", async (event) => {
+      event.preventDefault();
+      disableElement(button);
+
+      try {
+        const payload = await localPaymentInstance.startPayment({
+          paymentType: method as LocalPaymentTypes,
+          amount: amount.total,
+          fallback,
+          currencyCode: amount.currency,
+          address: {
+            countryCode
+          },
+          onPaymentStart: function (data, start) {
+            // NOTE: It is critical here to store data.paymentId on your server
+            //       so it can be mapped to a webhook sent by Braintree once the
+            //       buyer completes their payment. See Start the payment
+            //       section for details.
+            if (onPaymentStart) {
+              onPaymentStart(data).then(
+                () => start(),
+                (reason) => {
+                  if (onPaymentError) onPaymentError(method, reason);
+                }
+              );
+            } else {
+              // Call start to initiate the popup
+              start();
+            }
+          }
+        });
+
+        if (onPaymentRequestable) onPaymentRequestable(payload);
+      } catch (ex) {
+        if (onPaymentError)
+          onPaymentError(method, new Error("No Tokenization Params"));
+      }
+
+      disableElement(button, false);
+    });
+  };
+}
+
 /**
  * Etsoo Braintree UI component
  * @param props Props
@@ -352,6 +423,7 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
     children,
     environment = "TEST",
 
+    alipay,
     card,
     googlePay,
     paypal,
@@ -375,6 +447,22 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
       async (clientInstance) => {
         // Payment methods
         const items: PaymentMethods = {};
+
+        if (alipay) {
+          try {
+            const alipayRef = await createLocalPayment(
+              clientInstance,
+              { ...alipay, method: "alipay" },
+              environment,
+              amount,
+              onPaymentError,
+              onPaymentRequestable
+            );
+            items.alipay = alipayRef;
+          } catch (error) {
+            onError("alipay", error);
+          }
+        }
 
         if (card) {
           try {
