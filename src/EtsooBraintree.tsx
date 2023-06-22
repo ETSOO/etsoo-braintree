@@ -356,8 +356,14 @@ async function createLocalPayment(
   onPaymentError?: EtsooBraintreePaymentError,
   onPaymentRequestable?: (payload: PaymentPayload) => void
 ): Promise<React.RefCallback<HTMLElement>> {
-  const { countryCode, fallback, merchantAccountId, method, onPaymentStart } =
-    options;
+  const {
+    countryCode,
+    fallback,
+    merchantAccountId,
+    method,
+    onPaymentStart,
+    personalData
+  } = options;
 
   const localPaymentInstance = await localPayment.create({
     client: clientInstance,
@@ -396,7 +402,8 @@ async function createLocalPayment(
               // Call start to initiate the popup
               start();
             }
-          }
+          },
+          ...personalData
         });
 
         if (onPaymentRequestable) onPaymentRequestable(payload);
