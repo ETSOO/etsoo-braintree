@@ -401,8 +401,7 @@ async function createLocalPayment(
 
         if (onPaymentRequestable) onPaymentRequestable(payload);
       } catch (ex) {
-        if (onPaymentError)
-          onPaymentError(method, new Error("No Tokenization Params"));
+        if (onPaymentError) onPaymentError(method, ex);
       }
 
       disableElement(button, false);
