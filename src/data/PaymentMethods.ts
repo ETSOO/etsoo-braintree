@@ -3,6 +3,7 @@
  */
 export type PaymentMethods = {
   alipay?: React.RefCallback<HTMLElement>;
+  applePay?: React.RefCallback<HTMLElement>;
   card?: React.RefCallback<HTMLElement>;
   googlePay?: React.RefCallback<HTMLElement>;
   paypal?: React.RefCallback<HTMLElement>;

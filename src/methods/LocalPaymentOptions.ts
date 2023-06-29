@@ -5,6 +5,10 @@ import {
 } from "braintree-web/modules/local-payment";
 import { PaymentMethod } from "../data/PaymentMethods";
 
+/**
+ * Local payment options
+ * https://braintree.github.io/braintree-web/current/module-braintree-web_local-payment.html#.create
+ */
 export type LocalPaymentOptions = {
   countryCode?: string;
   fallback?: LocalPaymentFallback;

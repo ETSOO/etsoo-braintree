@@ -1,5 +1,12 @@
-import { HostedFieldsField } from "braintree-web/modules/hosted-fields";
+import {
+  HostedFields,
+  HostedFieldsField
+} from "braintree-web/modules/hosted-fields";
 
+/**
+ * Card payment options
+ * https://braintree.github.io/braintree-web/current/module-braintree-web_hosted-fields.html#.create
+ */
 export type CardOptions = {
   billingAddress?: any;
   fieldSetup?: (
@@ -9,4 +16,5 @@ export type CardOptions = {
   ) => void;
   styles?: any;
   vault?: boolean;
+  setup?: (instance: HostedFields) => void;
 };

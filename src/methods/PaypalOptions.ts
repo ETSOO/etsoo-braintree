@@ -1,3 +1,7 @@
+/**
+ * Paypal options
+ * https://braintree.github.io/braintree-web/current/module-braintree-web_paypal.html#.create
+ */
 export type PaypalOptions = {
   buttonStyle?: any;
   debug?: boolean;

@@ -1,7 +1,9 @@
 import {
+  ApplePaySession,
   Client,
   HostedFieldFieldOptions,
   LocalPaymentTypes,
+  applePay,
   client,
   googlePayment,
   hostedFields,
@@ -20,6 +22,7 @@ import { PaymentPayload } from "./data/PaymentPayload";
 import { PaypalOptions } from "./methods/PaypalOptions";
 import { AlipayOptions } from "./methods/AlipayOptions";
 import { LocalPaymentOptions } from "./methods/LocalPaymentOptions";
+import { ApplePayOptions } from "./methods/ApplePayOptions";
 
 /**
  * Etsoo Braintree Payment Error type
@@ -65,6 +68,11 @@ export type EtsooBraintreePros = {
    * Alipay
    */
   alipay?: AlipayOptions;
+
+  /**
+   * Apple pay
+   */
+  applePay?: ApplePayOptions;
 
   /**
    * Card payment
@@ -118,7 +126,7 @@ async function createCard(
   onPaymentError?: EtsooBraintreePaymentError,
   onPaymentRequestable?: (payload: PaymentPayload) => void
 ): Promise<React.RefCallback<HTMLElement>> {
-  const { billingAddress, fieldSetup, styles, vault } = options;
+  const { billingAddress, fieldSetup, setup, styles, vault } = options;
 
   return (container) => {
     if (container == null) return;
@@ -142,12 +150,20 @@ async function createCard(
       const selector = `#${key}`;
       const keyField = container.querySelector<HTMLElement>(selector);
       if (keyField) {
-        const field: HostedFieldsField = { selector };
+        // Pass properties with container's data-*
+        const ds = keyField.dataset;
+        const field: HostedFieldsField = {
+          selector,
+          placeholder: ds.placeholder,
+          type: ds.type
+        };
         fields[key] = field;
         if (fieldSetup) fieldSetup(key, keyField, field);
       }
     });
 
+    // https://braintree.github.io/braintree-web/current/module-braintree-web_hosted-fields.html#.create
+    // Type for preventAutofill is unavailable
     hostedFields
       .create({
         client: clientInstance,
@@ -176,6 +192,8 @@ async function createCard(
           throw reason;
         }
       );
+
+    if (setup) setup(hostedFields);
   };
 }
 
@@ -197,6 +215,91 @@ function loadGooglePayScript() {
   });
 }
 
+async function createApplePay(
+  clientInstance: Client,
+  options: ApplePayOptions,
+  environment: EnvironmentType,
+  amount: PaymentAmount,
+  onPaymentError?: EtsooBraintreePaymentError,
+  onPaymentRequestable?: (payload: PaymentPayload) => void
+): Promise<React.RefCallback<HTMLElement> | undefined> {
+  // Destruct
+  const { totalLabel = "" } = options;
+
+  // Create apple pay
+  // https://braintree.github.io/braintree-web/current/module-braintree-web_apple-pay.html#.create
+  await applePay.create({ client: clientInstance });
+
+  var paymentRequest = applePay.createPaymentRequest({
+    total: {
+      label: totalLabel,
+      amount: amount.total.toFixed(amount.fractionDigits ?? 2)
+    },
+
+    // We recommend collecting billing address information, at minimum
+    // billing postal code, and passing that billing postal code with
+    // all Apple Pay transactions as a best practice.
+    requiredBillingContactFields: ["postalAddress"]
+  });
+
+  console.log("Apple Pay Request", paymentRequest);
+
+  return (button) => {
+    if (button == null) return;
+
+    button.addEventListener("click", async (event) => {
+      event.preventDefault();
+
+      disableElement(button);
+
+      try {
+        // ApplePaySession should be created each time a payment is explicitly requested by a customer,
+        // such as inside an onclick event. Otherwise, it throws a JavaScript exception.
+        const session = new ApplePaySession(3, paymentRequest);
+
+        session.onvalidatemerchant = function (event) {
+          applePay
+            .performValidation({
+              validationURL: event.validationURL,
+              displayName: "My Store"
+            })
+            .then(function (merchantSession) {
+              session.completeMerchantValidation(merchantSession);
+            })
+            .catch(function (validationErr) {
+              // You should show an error to the user, e.g. 'Apple Pay failed to load.'
+              if (onPaymentError) onPaymentError("applePay", validationErr);
+              session.abort();
+            });
+        };
+
+        session.onpaymentauthorized = function (event) {
+          applePay
+            .tokenize({
+              token: event.payment.token
+            })
+            .then(function (payload) {
+              // After you have transacted with the payload.nonce,
+              // call 'completePayment' to dismiss the Apple Pay sheet.
+              if (onPaymentRequestable) onPaymentRequestable(payload);
+              session.completePayment(ApplePaySession.STATUS_SUCCESS);
+            })
+            .catch(function (tokenizeErr) {
+              if (onPaymentError) onPaymentError("applePay", tokenizeErr);
+              session.completePayment(ApplePaySession.STATUS_FAILURE);
+            });
+        };
+
+        session.begin();
+      } catch (ex) {
+        if (onPaymentError) onPaymentError("applePay", ex);
+      }
+
+      disableElement(button, false);
+    });
+  };
+}
+
 async function createGooglePay(
   clientInstance: Client,
   options: GooglePayOptions,
@@ -211,6 +314,7 @@ async function createGooglePay(
   const { merchantId, totalPriceStatus = "FINAL", version = 2 } = options;
 
   // Google payment instance
+  // https://braintree.github.io/braintree-web/current/module-braintree-web_google-payment.html#.create
   const paymentInstance = await googlePayment.create({
     client: clientInstance,
     googlePayVersion: version,
@@ -283,6 +387,7 @@ async function createPaypal(
     vault = false
   } = options;
 
+  // https://braintree.github.io/braintree-web/current/module-braintree-web_paypal.html#.create
   const payInstance = await paypalCheckout.create({
     client: clientInstance,
     merchantAccountId
@@ -365,6 +470,7 @@ async function createLocalPayment(
     personalData
   } = options;
 
+  // https://braintree.github.io/braintree-web/current/module-braintree-web_local-payment.html#.create
   const localPaymentInstance = await localPayment.create({
     client: clientInstance,
     merchantAccountId
@@ -418,6 +524,7 @@ async function createLocalPayment(
 
 /**
  * Etsoo Braintree UI component
+ * https://braintree.github.io/braintree-web/current/index.html
  * @param props Props
  * @returns Component
  */
@@ -430,6 +537,7 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
     environment = "TEST",
 
     alipay,
+    applePay,
     card,
     googlePay,
     paypal,
@@ -467,6 +575,30 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
             items.alipay = alipayRef;
           } catch (error) {
             onError("alipay", error);
+          }
+        }
+
+        if (applePay) {
+          try {
+            if ((globalThis as any).ApplePaySession) {
+              console.log("This device does not support Apple Pay");
+            } else if (!ApplePaySession.canMakePayments()) {
+              console.log(
+                "This device is not capable of making Apple Pay payments"
+              );
+            } else {
+              const applePayRef = await createApplePay(
+                clientInstance,
+                applePay,
+                environment,
+                amount,
+                onPaymentError,
+                onPaymentRequestable
+              );
+              items.applePay = applePayRef;
+            }
+          } catch (error) {
+            onError("applePay", error);
           }
         }
 

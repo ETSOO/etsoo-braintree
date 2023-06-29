@@ -1,4 +1,5 @@
 import {
+  ApplePayPayload,
   GooglePaymentTokenizePayload,
   HostedFieldsTokenizePayload,
   LocalPaymentTokenizePayload
@@ -8,4 +9,5 @@ export type PaymentPayload =
   | GooglePaymentTokenizePayload
   | HostedFieldsTokenizePayload
   | LocalPaymentTokenizePayload
+  | ApplePayPayload
   | paypal.AuthorizationResponse;
