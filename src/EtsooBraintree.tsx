@@ -601,13 +601,11 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
 
         if (applePay) {
           try {
-            if ((globalThis as any).ApplePaySession) {
-              console.log("This device does not support Apple Pay");
-            } else if (!ApplePaySession.canMakePayments()) {
-              console.log(
-                "This device is not capable of making Apple Pay payments"
-              );
-            } else {
+            if (
+              "ApplePaySession" in globalThis &&
+              ApplePaySession.supportsVersion(3) &&
+              ApplePaySession.canMakePayments()
+            ) {
               const applePayRef = await createApplePay(
                 clientInstance,
                 applePay,
@@ -617,6 +615,8 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
                 onPaymentRequestable
               );
               items.applePay = applePayRef;
+            } else {
+              console.log("This device does not support Apple Pay");
             }
           } catch (error) {
             onError("applePay", error);
