@@ -1,6 +1,7 @@
 import {
   HostedFields,
-  HostedFieldsField
+  HostedFieldsField,
+  HostedFieldsState
 } from "braintree-web/modules/hosted-fields";
 
 /**
@@ -17,4 +18,5 @@ export type CardOptions = {
   styles?: any;
   vault?: boolean;
   setup?: (instance: HostedFields) => void;
+  onSubmit?: (state: HostedFieldsState) => boolean | void;
 };

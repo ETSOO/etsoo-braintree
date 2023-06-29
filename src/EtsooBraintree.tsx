@@ -16,7 +16,10 @@ import { CardOptions } from "./methods/CardOptions";
 import { EnvironmentType } from "./data/EnvironmentType";
 import { PaymentMethod, PaymentMethods } from "./data/PaymentMethods";
 import { PaymentAmount } from "./data/PaymentAmount";
-import { HostedFieldsField } from "braintree-web/modules/hosted-fields";
+import {
+  HostedFieldsField,
+  HostedFieldsHostedFieldsFieldName
+} from "braintree-web/modules/hosted-fields";
 import { HostedFieldFieldType } from "./data/HostedFieldFieldType";
 import { PaymentPayload } from "./data/PaymentPayload";
 import { PaypalOptions } from "./methods/PaypalOptions";
@@ -126,7 +129,8 @@ async function createCard(
   onPaymentError?: EtsooBraintreePaymentError,
   onPaymentRequestable?: (payload: PaymentPayload) => void
 ): Promise<React.RefCallback<HTMLElement>> {
-  const { billingAddress, fieldSetup, setup, styles, vault } = options;
+  const { billingAddress, fieldSetup, onSubmit, setup, styles, vault } =
+    options;
 
   return (container) => {
     if (container == null) return;
@@ -174,6 +178,23 @@ async function createCard(
         (hFields) => {
           submit.addEventListener("click", (event) => {
             event.preventDefault();
+
+            // Check state
+            const state = hFields.getState();
+            const result = onSubmit == null ? undefined : onSubmit(state);
+            if (result === false) return;
+
+            if (result !== true) {
+              // Default validations
+              let key: HostedFieldsHostedFieldsFieldName;
+              for (key in state.fields) {
+                const field = state.fields[key];
+                if (!field.isValid) {
+                  hFields.focus(key);
+                  return;
+                }
+              }
+            }
 
             disableElement(submit);
 

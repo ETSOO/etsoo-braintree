@@ -1,6 +1,6 @@
 {
   "name": "@etsoo/braintree",
-  "version": "1.0.18",
+  "version": "1.0.19",
   "description": "React components for Braintree",
   "main": "lib/cjs/index.js",
   "module": "lib/mjs/index.js",
