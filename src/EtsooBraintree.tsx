@@ -176,6 +176,10 @@ async function createCard(
       })
       .then(
         (hFields) => {
+          // Additional setup actions
+          if (setup) setup(hFields);
+
+          // Click handler
           submit.addEventListener("click", (event) => {
             event.preventDefault();
 
@@ -213,8 +217,6 @@ async function createCard(
           throw reason;
         }
       );
-
-    if (setup) setup(hostedFields);
   };
 }
 
