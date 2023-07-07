@@ -3,12 +3,14 @@ import {
   Client,
   HostedFieldFieldOptions,
   LocalPaymentTypes,
+  ThreeDSecure,
   applePay,
   client,
   googlePayment,
   hostedFields,
   localPayment,
-  paypalCheckout
+  paypalCheckout,
+  threeDSecure
 } from "braintree-web";
 import React from "react";
 import { GooglePayOptions } from "./methods/GooglePayOptions";
@@ -26,6 +28,7 @@ import { PaypalOptions } from "./methods/PaypalOptions";
 import { AlipayOptions } from "./methods/AlipayOptions";
 import { LocalPaymentOptions } from "./methods/LocalPaymentOptions";
 import { ApplePayOptions } from "./methods/ApplePayOptions";
+import { ThreeDSecureVerificationData } from "braintree-web/modules/three-d-secure";
 
 /**
  * Etsoo Braintree Payment Error type
@@ -66,6 +69,11 @@ export type EtsooBraintreePros = {
    * Environment
    */
   environment?: EnvironmentType;
+
+  /**
+   * 3D Secure required or not
+   */
+  threeDSecure?: boolean;
 
   /**
    * Alipay
@@ -126,6 +134,8 @@ function disableElement(element: HTMLElement, disabled: boolean = true) {
 async function createCard(
   clientInstance: Client,
   options: CardOptions,
+  amount: PaymentAmount,
+  threeDSecureInstance?: ThreeDSecure,
   onPaymentError?: EtsooBraintreePaymentError,
   onPaymentRequestable?: (payload: PaymentPayload) => void
 ): Promise<React.RefCallback<HTMLElement>> {
@@ -204,6 +214,27 @@ async function createCard(
 
             hFields.tokenize({ billingAddress, vault }, (err, payload) => {
               if (payload) {
+                if (threeDSecureInstance) {
+                  threeDSecureInstance
+                    .verifyCard({
+                      amount: amount.total,
+                      nonce: payload.nonce,
+                      bin: payload.details.bin,
+
+                      billingAddress
+                    })
+                    .then(
+                      (payload) => {
+                        console.log(payload);
+                      },
+                      (reason) => {
+                        if (onPaymentError) {
+                          onPaymentError("card", reason);
+                        }
+                      }
+                    );
+                }
+
                 if (onPaymentRequestable) onPaymentRequestable(payload);
               } else if (onPaymentError) {
                 onPaymentError("card", err ?? new Error("Unknown"));
@@ -558,6 +589,7 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
     authorization,
     children,
     environment = "TEST",
+    threeDSecure: threeDSecureEnabled,
 
     alipay,
     applePay,
@@ -580,10 +612,27 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
     // Every renderere
     setMethods(undefined);
 
+    let threeDSecureInstance: ThreeDSecure | undefined;
+    const handler = (
+      data?: ThreeDSecureVerificationData,
+      next?: () => void
+    ) => {
+      console.log("lookup-complete", data);
+      if (next) next();
+    };
+
     client.create({ authorization }).then(
       async (clientInstance) => {
         // Payment methods
         const items: PaymentMethods = {};
+
+        threeDSecureInstance = threeDSecureEnabled
+          ? await threeDSecure.create({ client: clientInstance, version: 2 })
+          : undefined;
+
+        if (threeDSecureInstance) {
+          threeDSecureInstance.on("lookup-complete", handler);
+        }
 
         if (alipay) {
           try {
@@ -630,6 +679,8 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
             const cardRef = await createCard(
               clientInstance,
               card,
+              amount,
+              threeDSecureInstance,
               onPaymentError,
               onPaymentRequestable
             );
@@ -689,6 +740,8 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
 
     return () => {
       isMounted.current = false;
+      if (threeDSecureInstance)
+        threeDSecureInstance.off("lookup-complete", handler);
       if (client.teardown) client.teardown(onTeardown);
     };
   }, [authorization]);
