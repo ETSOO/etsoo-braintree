@@ -1,7 +1,8 @@
 import {
   ApplePayPayload,
   GooglePaymentTokenizePayload,
-  HostedFieldsTokenizePayload
+  HostedFieldsTokenizePayload,
+  ThreeDSecureVerifyPayload
 } from "braintree-web";
 import { PaymentPayload } from "./data/PaymentPayload";
 
@@ -29,6 +30,17 @@ export namespace EtsooBraintreeUtils {
     payload: PaymentPayload
   ): payload is HostedFieldsTokenizePayload {
     return payload.type === "CreditCard";
+  }
+
+  /**
+   * Is card payment 3DS response payload or not
+   * @param payload Response payload
+   * @returns Result
+   */
+  export function isCard3DSResponse(
+    payload: PaymentPayload
+  ): payload is ThreeDSecureVerifyPayload {
+    return payload.type === "CreditCard" && "threeDSecureInfo" in payload;
   }
 
   /**

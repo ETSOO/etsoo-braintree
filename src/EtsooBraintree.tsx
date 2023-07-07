@@ -225,7 +225,7 @@ async function createCard(
                     })
                     .then(
                       (payload) => {
-                        console.log(payload);
+                        if (onPaymentRequestable) onPaymentRequestable(payload);
                       },
                       (reason) => {
                         if (onPaymentError) {
@@ -233,9 +233,9 @@ async function createCard(
                         }
                       }
                     );
+                } else {
+                  if (onPaymentRequestable) onPaymentRequestable(payload);
                 }
-
-                if (onPaymentRequestable) onPaymentRequestable(payload);
               } else if (onPaymentError) {
                 onPaymentError("card", err ?? new Error("Unknown"));
               }
