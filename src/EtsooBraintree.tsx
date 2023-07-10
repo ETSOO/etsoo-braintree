@@ -296,8 +296,6 @@ async function createApplePay(
     requiredBillingContactFields: ["postalAddress"]
   });
 
-  console.log("Apple Pay Request", paymentRequest);
-
   return (button) => {
     if (button == null) return;
 
@@ -436,6 +434,7 @@ async function createPaypal(
   const {
     buttonStyle,
     debug = false,
+    fundingSource = "paypal",
     merchantAccountId,
     intent = "capture",
     vault = false
@@ -449,12 +448,20 @@ async function createPaypal(
 
   // Enable or disable funding resources within the portal site
   // Not in configuration
+  // https://developer.paypal.com/docs/checkout/standard/customize/standalone-buttons/
   await payInstance.loadPayPalSDK({
     currency: amount.currency,
+    components: "buttons,funding-eligibility" as any,
     intent,
     debug,
     vault
   });
+
+  // Funding source items
+  const fundingSourceItems =
+    typeof fundingSource === "string"
+      ? fundingSource.split(/\s*,\s*/g)
+      : fundingSource;
 
   const paypal = globalThis.paypal;
 
@@ -462,13 +469,14 @@ async function createPaypal(
     if (container == null) return;
 
     if (container.id === "") container.id = "paypal-container";
+    const isOneFundingSource = fundingSourceItems.length === 1;
 
-    try {
-      const flow = vault ? "vault" : "checkout";
-      paypal
-        .Buttons({
+    fundingSourceItems.forEach((fundingSource) => {
+      try {
+        const flow = vault ? "vault" : "checkout";
+        const button = paypal.Buttons({
           style: buttonStyle,
-          fundingSource: "paypal",
+          fundingSource,
           createOrder() {
             return payInstance.createPayment({
               flow: flow as paypal.FlowType, // Required
@@ -499,11 +507,42 @@ async function createPaypal(
           onError(err) {
             if (onPaymentError) onPaymentError("paypal", err);
           }
-        })
-        .render(`#${container.id}`);
-    } catch (ex) {
-      if (onPaymentError) onPaymentError("paypal", ex);
-    }
+        });
+
+        if (isOneFundingSource) {
+          button.render(`#${container.id}`);
+        } else {
+          const containerId = `fundingsource-${fundingSource}`;
+          const sourceContainer = document.getElementById(containerId);
+          if (sourceContainer == null) {
+            if (onPaymentError)
+              onPaymentError(
+                "paypal",
+                `No container ${containerId} defined for the funding source ${fundingSource}`
+              );
+          } else {
+            const isEligible: boolean =
+              "isEligible" in button && typeof button.isEligible === "function"
+                ? button.isEligible()
+                : true;
+
+            const isEligibleTrueClass = "paypal-eligible-true";
+            const isEligibleFalseClass = "paypal-eligible-false";
+            if (isEligible) {
+              sourceContainer.classList.remove(isEligibleFalseClass);
+              sourceContainer.classList.add(isEligibleTrueClass);
+            } else {
+              sourceContainer.classList.remove(isEligibleTrueClass);
+              sourceContainer.classList.add(isEligibleFalseClass);
+            }
+
+            if (isEligible) button.render(`#${containerId}`);
+          }
+        }
+      } catch (ex) {
+        if (onPaymentError) onPaymentError("paypal", ex);
+      }
+    });
   };
 }
 

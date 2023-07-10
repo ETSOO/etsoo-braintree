@@ -5,6 +5,7 @@
 export type PaypalOptions = {
   buttonStyle?: any;
   debug?: boolean;
+  fundingSource?: string | string[];
   intent?: "authorize" | "capture" | "sale" | "tokenize";
   merchantAccountId?: string;
   vault?: boolean;
