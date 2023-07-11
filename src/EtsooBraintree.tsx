@@ -439,9 +439,7 @@ async function createPaypal(
     intent = "capture",
     vault = false,
 
-    disableFunding,
-    enableFunding,
-    buyerCountry
+    ...rest
   } = options;
 
   // https://braintree.github.io/braintree-web/current/module-braintree-web_paypal.html#.create
@@ -459,9 +457,7 @@ async function createPaypal(
     intent,
     debug,
     vault,
-    "disable-funding": disableFunding,
-    "enable-funding": enableFunding,
-    "buyer-country": buyerCountry
+    ...rest
   });
 
   // Funding source items

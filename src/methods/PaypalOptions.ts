@@ -16,16 +16,16 @@ export type PaypalOptions = {
    * e.g. card, credit, bancontact
    * The full list is available in the PayPal SDK docs.
    */
-  disableFunding?: string;
+  "disable-funding"?: string;
   /**
    * Funding sources to allow in the checkout buttons.
    * e.g. venmo, paylater
    * The full list is available in the PayPal SDK docs.
    */
-  enableFunding?: string;
+  "enable-funding"?: string;
 
   /**
    * The buyer country. Available in Sandbox for testing.
    */
-  buyerCountry?: string;
+  "buyer-country"?: string;
 };
