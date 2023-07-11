@@ -4,6 +4,7 @@
  */
 export type PaypalOptions = {
   buttonStyle?: paypal.ButtonStyle | Record<string, paypal.ButtonStyle>;
+  debug?: boolean;
   fundingSource?: string | string[];
   intent?: "authorize" | "capture" | "sale" | "tokenize";
   merchantAccountId?: string;
@@ -15,16 +16,16 @@ export type PaypalOptions = {
    * e.g. card, credit, bancontact
    * The full list is available in the PayPal SDK docs.
    */
-  "disable-funding"?: string;
+  disableFunding?: string;
   /**
    * Funding sources to allow in the checkout buttons.
    * e.g. venmo, paylater
    * The full list is available in the PayPal SDK docs.
    */
-  "enable-funding"?: string;
+  enableFunding?: string;
 
   /**
    * The buyer country. Available in Sandbox for testing.
    */
-  "buyer-country"?: string;
+  buyerCountry?: string;
 };

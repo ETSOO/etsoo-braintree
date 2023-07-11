@@ -433,14 +433,16 @@ async function createPaypal(
 ): Promise<React.RefCallback<HTMLElement>> {
   const {
     buttonStyle,
+    debug = environment === "TEST",
     fundingSource = "paypal",
     merchantAccountId,
     intent = "capture",
     vault = false,
-    ...rest
-  } = options;
 
-  const debug = environment === "TEST";
+    disableFunding,
+    enableFunding,
+    buyerCountry
+  } = options;
 
   // https://braintree.github.io/braintree-web/current/module-braintree-web_paypal.html#.create
   const payInstance = await paypalCheckout.create({
@@ -457,7 +459,9 @@ async function createPaypal(
     intent,
     debug,
     vault,
-    ...rest
+    "disable-funding": disableFunding,
+    "enable-funding": enableFunding,
+    "buyer-country": buyerCountry
   });
 
   // Funding source items
