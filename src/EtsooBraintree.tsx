@@ -665,8 +665,6 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
   React.useEffect(() => {
     let newClient: Client | undefined;
 
-    console.log("newClient", newClient, isMounted.current);
-
     let threeDSecureInstance: ThreeDSecure | undefined;
     const handler = (
       data?: ThreeDSecureVerificationData,
@@ -800,6 +798,8 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
     return () => {
       if (threeDSecureInstance)
         threeDSecureInstance.off("lookup-complete", handler);
+
+      if (hostedFields.teardown) hostedFields.teardown();
 
       if (newClient) {
         newClient.teardown(() => {
