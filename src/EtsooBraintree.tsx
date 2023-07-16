@@ -118,7 +118,7 @@ export type EtsooBraintreePros = {
   /**
    * Payment requestable callback
    */
-  onPaymentRequestable?: (payload: PaymentPayload) => void;
+  onPaymentRequestable?: (payload: PaymentPayload, client: Client) => void;
 
   /**
    * Teardown callback
@@ -137,7 +137,7 @@ async function createCard(
   amount: PaymentAmount,
   threeDSecureInstance?: ThreeDSecure,
   onPaymentError?: EtsooBraintreePaymentError,
-  onPaymentRequestable?: (payload: PaymentPayload) => void
+  onPaymentRequestable?: (payload: PaymentPayload, client: Client) => void
 ): Promise<React.RefCallback<HTMLElement>> {
   const { billingAddress, fieldSetup, onSubmit, setup, styles, vault } =
     options;
@@ -225,7 +225,8 @@ async function createCard(
                     })
                     .then(
                       (payload) => {
-                        if (onPaymentRequestable) onPaymentRequestable(payload);
+                        if (onPaymentRequestable)
+                          onPaymentRequestable(payload, clientInstance);
                       },
                       (reason) => {
                         if (onPaymentError) {
@@ -234,7 +235,8 @@ async function createCard(
                       }
                     );
                 } else {
-                  if (onPaymentRequestable) onPaymentRequestable(payload);
+                  if (onPaymentRequestable)
+                    onPaymentRequestable(payload, clientInstance);
                 }
               } else if (onPaymentError) {
                 onPaymentError("card", err ?? new Error("Unknown"));
@@ -275,7 +277,7 @@ async function createApplePay(
   environment: EnvironmentType,
   amount: PaymentAmount,
   onPaymentError?: EtsooBraintreePaymentError,
-  onPaymentRequestable?: (payload: PaymentPayload) => void
+  onPaymentRequestable?: (payload: PaymentPayload, client: Client) => void
 ): Promise<React.RefCallback<HTMLElement> | undefined> {
   // Destruct
   const { totalLabel = "" } = options;
@@ -333,7 +335,8 @@ async function createApplePay(
             .then(function (payload) {
               // After you have transacted with the payload.nonce,
               // call 'completePayment' to dismiss the Apple Pay sheet.
-              if (onPaymentRequestable) onPaymentRequestable(payload);
+              if (onPaymentRequestable)
+                onPaymentRequestable(payload, clientInstance);
               session.completePayment(ApplePaySession.STATUS_SUCCESS);
             })
             .catch(function (tokenizeErr) {
@@ -358,7 +361,7 @@ async function createGooglePay(
   environment: EnvironmentType,
   amount: PaymentAmount,
   onPaymentError?: EtsooBraintreePaymentError,
-  onPaymentRequestable?: (payload: PaymentPayload) => void
+  onPaymentRequestable?: (payload: PaymentPayload, client: Client) => void
 ): Promise<React.RefCallback<HTMLElement> | undefined> {
   // Load google payment script
   await loadGooglePayScript();
@@ -412,7 +415,8 @@ async function createGooglePay(
             paymentData
           );
 
-          if (onPaymentRequestable) onPaymentRequestable(paymentResponse);
+          if (onPaymentRequestable)
+            onPaymentRequestable(paymentResponse, clientInstance);
         } catch (ex) {
           if (onPaymentError) onPaymentError("googlePay", ex);
         }
@@ -429,7 +433,7 @@ async function createPaypal(
   environment: EnvironmentType,
   amount: PaymentAmount,
   onPaymentError?: EtsooBraintreePaymentError,
-  onPaymentRequestable?: (payload: PaymentPayload) => void
+  onPaymentRequestable?: (payload: PaymentPayload, client: Client) => void
 ): Promise<React.RefCallback<HTMLElement>> {
   const {
     buttonStyle,
@@ -502,7 +506,8 @@ async function createPaypal(
           onApprove(data, actions) {
             return payInstance.tokenizePayment(data).then(
               (payload) => {
-                if (onPaymentRequestable) onPaymentRequestable(payload);
+                if (onPaymentRequestable)
+                  onPaymentRequestable(payload, clientInstance);
                 return payload;
               },
               (reason) => {
@@ -562,7 +567,7 @@ async function createLocalPayment(
   environment: EnvironmentType,
   amount: PaymentAmount,
   onPaymentError?: EtsooBraintreePaymentError,
-  onPaymentRequestable?: (payload: PaymentPayload) => void
+  onPaymentRequestable?: (payload: PaymentPayload, client: Client) => void
 ): Promise<React.RefCallback<HTMLElement>> {
   const {
     countryCode,
@@ -615,7 +620,7 @@ async function createLocalPayment(
           ...personalData
         });
 
-        if (onPaymentRequestable) onPaymentRequestable(payload);
+        if (onPaymentRequestable) onPaymentRequestable(payload, clientInstance);
       } catch (ex) {
         if (onPaymentError) onPaymentError(method, ex);
       }
@@ -658,8 +663,9 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
   const isMounted = React.useRef<boolean>();
 
   React.useEffect(() => {
-    // Every renderere
-    setMethods(undefined);
+    let newClient: Client | undefined;
+
+    console.log("newClient", newClient, isMounted.current);
 
     let threeDSecureInstance: ThreeDSecure | undefined;
     const handler = (
@@ -672,6 +678,10 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
 
     client.create({ authorization }).then(
       async (clientInstance) => {
+        // Cache the client
+        newClient = clientInstance;
+        isMounted.current = true;
+
         // Payment methods
         const items: PaymentMethods = {};
 
@@ -788,12 +798,19 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
     );
 
     return () => {
-      isMounted.current = false;
       if (threeDSecureInstance)
         threeDSecureInstance.off("lookup-complete", handler);
-      if (client.teardown) client.teardown(onTeardown);
+
+      if (newClient) {
+        newClient.teardown(() => {
+          isMounted.current = false;
+          onTeardown();
+        });
+      } else {
+        isMounted.current = false;
+      }
     };
-  }, [authorization]);
+  }, [authorization, JSON.stringify(amount)]);
 
   const childrenUI = React.useMemo(
     () => (methods == null ? onLoading() : children(methods, amount)),
