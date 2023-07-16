@@ -19,6 +19,7 @@ import { EnvironmentType } from "./data/EnvironmentType";
 import { PaymentMethod, PaymentMethods } from "./data/PaymentMethods";
 import { PaymentAmount } from "./data/PaymentAmount";
 import {
+  HostedFields,
   HostedFieldsField,
   HostedFieldsHostedFieldsFieldName
 } from "braintree-web/modules/hosted-fields";
@@ -135,6 +136,7 @@ async function createCard(
   clientInstance: Client,
   options: CardOptions,
   amount: PaymentAmount,
+  hostedFieldsRef: React.MutableRefObject<HostedFields | undefined>,
   threeDSecureInstance?: ThreeDSecure,
   onPaymentError?: EtsooBraintreePaymentError,
   onPaymentRequestable?: (payload: PaymentPayload, client: Client) => void
@@ -186,6 +188,9 @@ async function createCard(
       })
       .then(
         (hFields) => {
+          // Reference
+          hostedFieldsRef.current = hFields;
+
           // Additional setup actions
           if (setup) setup(hFields);
 
@@ -661,6 +666,7 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
   // States
   const [methods, setMethods] = React.useState<PaymentMethods>();
   const isMounted = React.useRef<boolean>();
+  const hostedFieldsRef = React.useRef<HostedFields>();
 
   React.useEffect(() => {
     let newClient: Client | undefined;
@@ -737,6 +743,7 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
               clientInstance,
               card,
               amount,
+              hostedFieldsRef,
               threeDSecureInstance,
               onPaymentError,
               onPaymentRequestable
@@ -799,7 +806,10 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
       if (threeDSecureInstance)
         threeDSecureInstance.off("lookup-complete", handler);
 
-      if (hostedFields.teardown) hostedFields.teardown();
+      if (hostedFieldsRef.current) {
+        hostedFieldsRef.current.teardown();
+        hostedFieldsRef.current = undefined;
+      }
 
       if (newClient) {
         newClient.teardown(() => {
