@@ -530,6 +530,13 @@ async function createPaypal(
               }
             );
           },
+          onClick() {
+            if (
+              onPaymentStart &&
+              onPaymentStart(new MouseEvent("click"), container) === false
+            )
+              return;
+          },
           onCancel(data) {
             console.log("PayPal payment cancelled", data);
           },
