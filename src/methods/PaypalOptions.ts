@@ -1,9 +1,11 @@
+import { PaypalButtonStyle } from "..";
+
 /**
  * Paypal options
  * https://braintree.github.io/braintree-web/current/module-braintree-web_paypal.html#.create
  */
 export type PaypalOptions = {
-  buttonStyle?: paypal.ButtonStyle | Record<string, paypal.ButtonStyle>;
+  buttonStyle?: PaypalButtonStyle | Record<string, PaypalButtonStyle>;
   debug?: boolean;
   fundingSource?: string | string[];
   intent?: "authorize" | "capture" | "sale" | "tokenize";

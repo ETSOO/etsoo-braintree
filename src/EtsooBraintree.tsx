@@ -54,6 +54,35 @@ export type EtsooBraintreeError = (
 ) => void;
 
 /**
+ * Error with custom data
+ * Copy from 'DataError' of @etsoo/shared
+ * Other information can be hold by 'name', 'cause', and 'stack' property
+ *
+ */
+export class EtsooBraintreeDataError<
+  T = Record<string, unknown>
+> extends Error {
+  /**
+   * Custom data
+   */
+  public readonly data: T;
+
+  /**
+   * Constructor
+   * @param message Error message
+   * @param data Custom data
+   */
+  constructor(message: string, data: T) {
+    super(message);
+
+    this.data = data;
+
+    // Set the prototype explicitly to ensure instanceof works correctly
+    Object.setPrototypeOf(this, EtsooBraintreeDataError.prototype);
+  }
+}
+
+/**
  * ETSOO Braintree props
  */
 export type EtsooBraintreePros = {
@@ -538,7 +567,13 @@ async function createPaypal(
               return;
           },
           onCancel(data) {
-            console.log("PayPal payment cancelled", data);
+            const error = new EtsooBraintreeDataError(
+              "PayPal payment cancelled",
+              data
+            );
+            error.cause = "cancel";
+
+            onPaymentError(container, "paypal", error);
           },
           onError(err) {
             onPaymentError(container, "paypal", err);
@@ -551,12 +586,12 @@ async function createPaypal(
           const containerId = `fundingsource-${fundingSource}`;
           const sourceContainer = document.getElementById(containerId);
           if (sourceContainer == null) {
-            if (onPaymentError)
-              onPaymentError(
-                container,
-                "paypal",
+            if (onPaymentError) {
+              const error = new Error(
                 `No container ${containerId} defined for the funding source ${fundingSource}`
               );
+              onPaymentError(container, "paypal", error);
+            }
           } else {
             const isEligible: boolean =
               "isEligible" in button && typeof button.isEligible === "function"
