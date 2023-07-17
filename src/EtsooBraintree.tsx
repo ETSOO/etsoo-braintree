@@ -39,6 +39,12 @@ export type EtsooBraintreePaymentError = (
   reason: unknown
 ) => void;
 
+type PaymentErrorHandler = (
+  element: HTMLElement,
+  method: PaymentMethod,
+  reason: unknown
+) => void;
+
 /**
  * Etsoo Braintree Error type
  */
@@ -119,7 +125,17 @@ export type EtsooBraintreePros = {
   /**
    * Payment requestable callback
    */
-  onPaymentRequestable?: (payload: PaymentPayload, client: Client) => void;
+  onPaymentRequestable: (payload: PaymentPayload) => Promise<void>;
+
+  /**
+   * Payment start callback
+   */
+  onPaymentStart?: (event: MouseEvent, element: HTMLElement) => boolean | void;
+
+  /**
+   * Payment end callback
+   */
+  onPaymentEnd?: (element: HTMLElement) => void;
 
   /**
    * Teardown callback
@@ -127,19 +143,18 @@ export type EtsooBraintreePros = {
   onTeardown?: () => void;
 };
 
-function disableElement(element: HTMLElement, disabled: boolean = true) {
-  if (disabled) element.setAttribute("disabled", "disabled");
-  else element.removeAttribute("disabled");
-}
-
 async function createCard(
   clientInstance: Client,
   options: CardOptions,
   amount: PaymentAmount,
   hostedFieldsRef: React.MutableRefObject<HostedFields | undefined>,
+  onPaymentRequestable: (
+    button: HTMLElement,
+    payload: PaymentPayload
+  ) => Promise<void>,
+  onPaymentError: PaymentErrorHandler,
   threeDSecureInstance?: ThreeDSecure,
-  onPaymentError?: EtsooBraintreePaymentError,
-  onPaymentRequestable?: (payload: PaymentPayload, client: Client) => void
+  onPaymentStart?: (event: MouseEvent, element: HTMLElement) => boolean | void
 ): Promise<React.RefCallback<HTMLElement>> {
   const { billingAddress, fieldSetup, onSubmit, setup, styles, vault } =
     options;
@@ -196,8 +211,6 @@ async function createCard(
 
           // Click handler
           submit.addEventListener("click", (event) => {
-            event.preventDefault();
-
             // Check state
             const state = hFields.getState();
             const result = onSubmit == null ? undefined : onSubmit(state);
@@ -215,7 +228,8 @@ async function createCard(
               }
             }
 
-            disableElement(submit);
+            if (onPaymentStart && onPaymentStart(event, submit) === false)
+              return;
 
             hFields.tokenize({ billingAddress, vault }, (err, payload) => {
               if (payload) {
@@ -230,24 +244,18 @@ async function createCard(
                     })
                     .then(
                       (payload) => {
-                        if (onPaymentRequestable)
-                          onPaymentRequestable(payload, clientInstance);
+                        onPaymentRequestable(submit, payload);
                       },
                       (reason) => {
-                        if (onPaymentError) {
-                          onPaymentError("card", reason);
-                        }
+                        onPaymentError(submit, "card", reason);
                       }
                     );
                 } else {
-                  if (onPaymentRequestable)
-                    onPaymentRequestable(payload, clientInstance);
+                  onPaymentRequestable(submit, payload);
                 }
-              } else if (onPaymentError) {
-                onPaymentError("card", err ?? new Error("Unknown"));
+              } else {
+                onPaymentError(submit, "card", err ?? new Error("Unknown"));
               }
-
-              disableElement(submit, false);
             });
           });
         },
@@ -281,8 +289,12 @@ async function createApplePay(
   options: ApplePayOptions,
   environment: EnvironmentType,
   amount: PaymentAmount,
-  onPaymentError?: EtsooBraintreePaymentError,
-  onPaymentRequestable?: (payload: PaymentPayload, client: Client) => void
+  onPaymentRequestable: (
+    button: HTMLElement,
+    payload: PaymentPayload
+  ) => Promise<void>,
+  onPaymentError: PaymentErrorHandler,
+  onPaymentStart?: (event: MouseEvent, element: HTMLElement) => boolean | void
 ): Promise<React.RefCallback<HTMLElement> | undefined> {
   // Destruct
   const { totalLabel = "" } = options;
@@ -307,9 +319,7 @@ async function createApplePay(
     if (button == null) return;
 
     button.addEventListener("click", async (event) => {
-      event.preventDefault();
-
-      disableElement(button);
+      if (onPaymentStart && onPaymentStart(event, button) === false) return;
 
       try {
         // ApplePaySession should be created each time a payment is explicitly requested by a customer,
@@ -327,7 +337,7 @@ async function createApplePay(
             })
             .catch(function (validationErr) {
               // You should show an error to the user, e.g. 'Apple Pay failed to load.'
-              if (onPaymentError) onPaymentError("applePay", validationErr);
+              onPaymentError(button, "applePay", validationErr);
               session.abort();
             });
         };
@@ -340,22 +350,19 @@ async function createApplePay(
             .then(function (payload) {
               // After you have transacted with the payload.nonce,
               // call 'completePayment' to dismiss the Apple Pay sheet.
-              if (onPaymentRequestable)
-                onPaymentRequestable(payload, clientInstance);
+              onPaymentRequestable(button, payload);
               session.completePayment(ApplePaySession.STATUS_SUCCESS);
             })
             .catch(function (tokenizeErr) {
-              if (onPaymentError) onPaymentError("applePay", tokenizeErr);
+              onPaymentError(button, "applePay", tokenizeErr);
               session.completePayment(ApplePaySession.STATUS_FAILURE);
             });
         };
 
         session.begin();
       } catch (ex) {
-        if (onPaymentError) onPaymentError("applePay", ex);
+        onPaymentError(button, "applePay", ex);
       }
-
-      disableElement(button, false);
     });
   };
 }
@@ -365,8 +372,12 @@ async function createGooglePay(
   options: GooglePayOptions,
   environment: EnvironmentType,
   amount: PaymentAmount,
-  onPaymentError?: EtsooBraintreePaymentError,
-  onPaymentRequestable?: (payload: PaymentPayload, client: Client) => void
+  onPaymentRequestable: (
+    button: HTMLElement,
+    payload: PaymentPayload
+  ) => Promise<void>,
+  onPaymentError: PaymentErrorHandler,
+  onPaymentStart?: (event: MouseEvent, element: HTMLElement) => boolean | void
 ): Promise<React.RefCallback<HTMLElement> | undefined> {
   // Load google payment script
   await loadGooglePayScript();
@@ -407,9 +418,7 @@ async function createGooglePay(
       if (button == null) return;
 
       button.addEventListener("click", async (event) => {
-        event.preventDefault();
-
-        disableElement(button);
+        if (onPaymentStart && onPaymentStart(event, button) === false) return;
 
         try {
           // Load payment data
@@ -420,13 +429,10 @@ async function createGooglePay(
             paymentData
           );
 
-          if (onPaymentRequestable)
-            onPaymentRequestable(paymentResponse, clientInstance);
+          onPaymentRequestable(button, paymentResponse);
         } catch (ex) {
-          if (onPaymentError) onPaymentError("googlePay", ex);
+          onPaymentError(button, "googlePay", ex);
         }
-
-        disableElement(button, false);
       });
     };
   }
@@ -437,8 +443,12 @@ async function createPaypal(
   options: PaypalOptions,
   environment: EnvironmentType,
   amount: PaymentAmount,
-  onPaymentError?: EtsooBraintreePaymentError,
-  onPaymentRequestable?: (payload: PaymentPayload, client: Client) => void
+  onPaymentRequestable: (
+    button: HTMLElement,
+    payload: PaymentPayload
+  ) => Promise<void>,
+  onPaymentError: PaymentErrorHandler,
+  onPaymentStart?: (event: MouseEvent, element: HTMLElement) => boolean | void
 ): Promise<React.RefCallback<HTMLElement>> {
   const {
     buttonStyle,
@@ -511,12 +521,11 @@ async function createPaypal(
           onApprove(data, actions) {
             return payInstance.tokenizePayment(data).then(
               (payload) => {
-                if (onPaymentRequestable)
-                  onPaymentRequestable(payload, clientInstance);
+                onPaymentRequestable(container, payload);
                 return payload;
               },
               (reason) => {
-                if (onPaymentError) onPaymentError("paypal", reason);
+                onPaymentError(container, "paypal", reason);
                 return {} as paypal.AuthorizationResponse;
               }
             );
@@ -525,7 +534,7 @@ async function createPaypal(
             console.log("PayPal payment cancelled", data);
           },
           onError(err) {
-            if (onPaymentError) onPaymentError("paypal", err);
+            onPaymentError(container, "paypal", err);
           }
         });
 
@@ -537,6 +546,7 @@ async function createPaypal(
           if (sourceContainer == null) {
             if (onPaymentError)
               onPaymentError(
+                container,
                 "paypal",
                 `No container ${containerId} defined for the funding source ${fundingSource}`
               );
@@ -560,7 +570,7 @@ async function createPaypal(
           }
         }
       } catch (ex) {
-        if (onPaymentError) onPaymentError("paypal", ex);
+        onPaymentError(container, "paypal", ex);
       }
     });
   };
@@ -571,15 +581,19 @@ async function createLocalPayment(
   options: LocalPaymentOptions,
   environment: EnvironmentType,
   amount: PaymentAmount,
-  onPaymentError?: EtsooBraintreePaymentError,
-  onPaymentRequestable?: (payload: PaymentPayload, client: Client) => void
+  onPaymentRequestable: (
+    button: HTMLElement,
+    payload: PaymentPayload
+  ) => Promise<void>,
+  onPaymentError: PaymentErrorHandler,
+  onPaymentStart?: (event: MouseEvent, element: HTMLElement) => boolean | void
 ): Promise<React.RefCallback<HTMLElement>> {
   const {
     countryCode,
     fallback,
     merchantAccountId,
     method,
-    onPaymentStart,
+    onLocalPaymentStart,
     personalData
   } = options;
 
@@ -593,8 +607,7 @@ async function createLocalPayment(
     if (button == null) return;
 
     button.addEventListener("click", async (event) => {
-      event.preventDefault();
-      disableElement(button);
+      if (onPaymentStart && onPaymentStart(event, button) === false) return;
 
       try {
         const payload = await localPaymentInstance.startPayment({
@@ -610,11 +623,11 @@ async function createLocalPayment(
             //       so it can be mapped to a webhook sent by Braintree once the
             //       buyer completes their payment. See Start the payment
             //       section for details.
-            if (onPaymentStart) {
-              onPaymentStart(data).then(
+            if (onLocalPaymentStart) {
+              onLocalPaymentStart(data).then(
                 () => start(),
                 (reason) => {
-                  if (onPaymentError) onPaymentError(method, reason);
+                  onPaymentError(button, method, reason);
                 }
               );
             } else {
@@ -625,12 +638,10 @@ async function createLocalPayment(
           ...personalData
         });
 
-        if (onPaymentRequestable) onPaymentRequestable(payload, clientInstance);
+        onPaymentRequestable(button, payload);
       } catch (ex) {
-        if (onPaymentError) onPaymentError(method, ex);
+        onPaymentError(button, method, ex);
       }
-
-      disableElement(button, false);
     });
   };
 }
@@ -660,8 +671,24 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
     onLoading = () => "...",
     onPaymentError,
     onPaymentRequestable,
+    onPaymentStart,
+    onPaymentEnd,
     onTeardown = () => console.log("Teardown")
   } = props;
+
+  // Default callback
+  const onPaymentRequestableLocal = async (
+    button: HTMLElement,
+    payload: PaymentPayload
+  ) => {
+    await onPaymentRequestable(payload);
+    if (onPaymentEnd) onPaymentEnd(button);
+  };
+
+  const onPaymentErrorLocal: PaymentErrorHandler = (button, method, reason) => {
+    if (onPaymentError) onPaymentError(method, reason);
+    if (onPaymentEnd) onPaymentEnd(button);
+  };
 
   // States
   const [methods, setMethods] = React.useState<PaymentMethods>();
@@ -704,8 +731,9 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
               { ...alipay, method: "alipay" },
               environment,
               amount,
-              onPaymentError,
-              onPaymentRequestable
+              onPaymentRequestableLocal,
+              onPaymentErrorLocal,
+              onPaymentStart
             );
             items.alipay = alipayRef;
           } catch (error) {
@@ -725,8 +753,9 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
                 applePay,
                 environment,
                 amount,
-                onPaymentError,
-                onPaymentRequestable
+                onPaymentRequestableLocal,
+                onPaymentErrorLocal,
+                onPaymentStart
               );
               items.applePay = applePayRef;
             } else {
@@ -744,9 +773,10 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
               card,
               amount,
               hostedFieldsRef,
+              onPaymentRequestableLocal,
+              onPaymentErrorLocal,
               threeDSecureInstance,
-              onPaymentError,
-              onPaymentRequestable
+              onPaymentStart
             );
             items.card = cardRef;
           } catch (error) {
@@ -761,8 +791,9 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
               googlePay,
               environment,
               amount,
-              onPaymentError,
-              onPaymentRequestable
+              onPaymentRequestableLocal,
+              onPaymentErrorLocal,
+              onPaymentStart
             );
 
             if (googlePayRef == null) {
@@ -785,8 +816,9 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
               paypal,
               environment,
               amount,
-              onPaymentError,
-              onPaymentRequestable
+              onPaymentRequestableLocal,
+              onPaymentErrorLocal,
+              onPaymentStart
             );
             items.paypal = paypalRef;
           } catch (error) {
@@ -811,12 +843,14 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
         hostedFieldsRef.current = undefined;
       }
 
+      setMethods(undefined);
+
       if (newClient) {
         newClient.teardown(onTeardown);
       }
       isMounted.current = false;
     };
-  }, [authorization, JSON.stringify(amount)]);
+  }, [authorization, amount]);
 
   const childrenUI = React.useMemo(
     () =>

@@ -14,7 +14,7 @@ export type LocalPaymentOptions = {
   fallback?: LocalPaymentFallback;
   method: PaymentMethod;
   merchantAccountId?: string;
-  onPaymentStart?: (data: LocalPaymentStartData) => Promise<void>;
+  onLocalPaymentStart?: (data: LocalPaymentStartData) => Promise<void>;
   personalData?: {
     givenName?: string;
     surname?: string;

@@ -17,6 +17,7 @@ it("Initialization tests", async () => {
         amount={{ currency: "NZD", total: 100 }}
         authorization="abc"
         onLoading={onLoading}
+        onPaymentRequestable={(payload) => Promise.resolve()}
         onError={onError}
       >
         {() => <div>body</div>}
