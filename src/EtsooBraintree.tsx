@@ -812,19 +812,18 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
       }
 
       if (newClient) {
-        newClient.teardown(() => {
-          isMounted.current = false;
-          onTeardown();
-        });
-      } else {
-        isMounted.current = false;
+        newClient.teardown(onTeardown);
       }
+      isMounted.current = false;
     };
   }, [authorization, JSON.stringify(amount)]);
 
   const childrenUI = React.useMemo(
-    () => (methods == null ? onLoading() : children(methods, amount)),
-    [methods, amount, onLoading]
+    () =>
+      methods == null || !isMounted.current
+        ? onLoading()
+        : children(methods, amount),
+    [methods, amount, onLoading, isMounted.current]
   );
 
   return <React.Fragment>{childrenUI}</React.Fragment>;
