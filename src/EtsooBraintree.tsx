@@ -19,7 +19,6 @@ import { EnvironmentType } from "./data/EnvironmentType";
 import { PaymentMethod, PaymentMethods } from "./data/PaymentMethods";
 import { PaymentAmount } from "./data/PaymentAmount";
 import {
-  HostedFields,
   HostedFieldsField,
   HostedFieldsHostedFieldsFieldName
 } from "braintree-web/modules/hosted-fields";
@@ -771,6 +770,7 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
 
   React.useEffect(() => {
     let threeDSecureInstance: ThreeDSecure | undefined;
+
     const handler = (
       data?: ThreeDSecureVerificationData,
       next?: () => void
@@ -779,136 +779,164 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
       if (next) next();
     };
 
-    console.log("useEffect", isMounted.current, amount);
+    isMounted.current = true;
 
-    client.create({ authorization }).then(
-      async (clientInstance) => {
-        isMounted.current = true;
+    const createMethods = () => {
+      client.create({ authorization }).then(
+        async (clientInstance) => {
+          if (!isMounted.current) return;
 
-        // Payment methods
-        const items: PaymentMethods = {};
+          // Payment methods
+          const items: PaymentMethods = {};
 
-        threeDSecureInstance = threeDSecureEnabled
-          ? await threeDSecure.create({ client: clientInstance, version: 2 })
-          : undefined;
+          threeDSecureInstance = threeDSecureEnabled
+            ? await threeDSecure.create({ client: clientInstance, version: 2 })
+            : undefined;
 
-        if (threeDSecureInstance) {
-          threeDSecureInstance.on("lookup-complete", handler);
-        }
-
-        if (alipay) {
-          try {
-            const alipayRef = await createLocalPayment(
-              clientInstance,
-              teardownRefs[0],
-              { ...alipay, method: "alipay" },
-              environment,
-              amount,
-              onPaymentRequestableLocal,
-              onPaymentErrorLocal,
-              onPaymentStart
-            );
-            items.alipay = alipayRef;
-          } catch (error) {
-            onError("alipay", error);
+          if (threeDSecureInstance) {
+            threeDSecureInstance.on("lookup-complete", handler);
           }
-        }
 
-        if (applePay) {
-          try {
-            if (
-              "ApplePaySession" in globalThis &&
-              ApplePaySession.supportsVersion(3) &&
-              ApplePaySession.canMakePayments()
-            ) {
-              const applePayRef = await createApplePay(
+          if (alipay) {
+            try {
+              const alipayRef = await createLocalPayment(
                 clientInstance,
-                teardownRefs[1],
-                applePay,
+                teardownRefs[0],
+                { ...alipay, method: "alipay" },
                 environment,
                 amount,
                 onPaymentRequestableLocal,
                 onPaymentErrorLocal,
                 onPaymentStart
               );
-              items.applePay = applePayRef;
-            } else {
-              console.log("This device does not support Apple Pay");
+              items.alipay = alipayRef;
+            } catch (error) {
+              onError("alipay", error);
             }
-          } catch (error) {
-            onError("applePay", error);
           }
-        }
 
-        if (card) {
-          try {
-            const cardRef = await createCard(
-              clientInstance,
-              teardownRefs[2],
-              card,
-              amount,
-              onPaymentRequestableLocal,
-              onPaymentErrorLocal,
-              threeDSecureInstance,
-              onPaymentStart
-            );
-            items.card = cardRef;
-          } catch (error) {
-            onError("card", error);
+          if (applePay) {
+            try {
+              if (
+                "ApplePaySession" in globalThis &&
+                ApplePaySession.supportsVersion(3) &&
+                ApplePaySession.canMakePayments()
+              ) {
+                const applePayRef = await createApplePay(
+                  clientInstance,
+                  teardownRefs[1],
+                  applePay,
+                  environment,
+                  amount,
+                  onPaymentRequestableLocal,
+                  onPaymentErrorLocal,
+                  onPaymentStart
+                );
+                items.applePay = applePayRef;
+              } else {
+                console.log("This device does not support Apple Pay");
+              }
+            } catch (error) {
+              onError("applePay", error);
+            }
           }
-        }
 
-        if (googlePay) {
-          try {
-            const googlePayRef = await createGooglePay(
-              clientInstance,
-              teardownRefs[3],
-              googlePay,
-              environment,
-              amount,
-              onPaymentRequestableLocal,
-              onPaymentErrorLocal,
-              onPaymentStart
-            );
-
-            if (googlePayRef == null) {
-              onError(
-                "googlePay",
-                new Error("GooglePay API isReadyToPay failed")
+          if (card) {
+            try {
+              const cardRef = await createCard(
+                clientInstance,
+                teardownRefs[2],
+                card,
+                amount,
+                onPaymentRequestableLocal,
+                onPaymentErrorLocal,
+                threeDSecureInstance,
+                onPaymentStart
               );
-            } else {
-              items.googlePay = googlePayRef;
+              items.card = cardRef;
+            } catch (error) {
+              onError("card", error);
             }
-          } catch (error) {
-            onError("googlePay", error);
           }
-        }
 
-        if (paypal) {
+          if (googlePay) {
+            try {
+              const googlePayRef = await createGooglePay(
+                clientInstance,
+                teardownRefs[3],
+                googlePay,
+                environment,
+                amount,
+                onPaymentRequestableLocal,
+                onPaymentErrorLocal,
+                onPaymentStart
+              );
+
+              if (googlePayRef == null) {
+                onError(
+                  "googlePay",
+                  new Error("GooglePay API isReadyToPay failed")
+                );
+              } else {
+                items.googlePay = googlePayRef;
+              }
+            } catch (error) {
+              onError("googlePay", error);
+            }
+          }
+
+          if (paypal) {
+            try {
+              const paypalRef = await createPaypal(
+                clientInstance,
+                teardownRefs[4],
+                paypal,
+                environment,
+                amount,
+                onPaymentRequestableLocal,
+                onPaymentErrorLocal,
+                onPaymentStart
+              );
+              items.paypal = paypalRef;
+            } catch (error) {
+              onError("paypal", error);
+            }
+          }
+
+          // Update methods
+          setMethods(items);
+        },
+        (reason) => {
+          onError(undefined, reason);
+        }
+      );
+    };
+
+    // Clear methods
+    console.log("methods", methods, typeof client.teardown);
+    if (methods) {
+      setMethods(undefined);
+    }
+
+    if (client.teardown) {
+      teardownRefs.forEach((ref, index) => {
+        if (ref.current) {
           try {
-            const paypalRef = await createPaypal(
-              clientInstance,
-              teardownRefs[4],
-              paypal,
-              environment,
-              amount,
-              onPaymentRequestableLocal,
-              onPaymentErrorLocal,
-              onPaymentStart
-            );
-            items.paypal = paypalRef;
-          } catch (error) {
-            onError("paypal", error);
+            ref.current();
+          } catch (e) {
+            console.log(`Teardown reference ${index}`, e);
           }
         }
+        ref.current = undefined;
+      });
 
-        // Update methods
-        setMethods(items);
-      },
-      (reason) => {
-        onError(undefined, reason);
-      }
-    );
+      client.teardown(() => {
+        if (!isMounted.current) return;
+        createMethods();
+      });
+    } else {
+      createMethods();
+    }
 
     return () => {
       if (threeDSecureInstance) {
