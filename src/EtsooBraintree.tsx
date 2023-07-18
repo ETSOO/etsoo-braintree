@@ -45,6 +45,9 @@ type PaymentErrorHandler = (
   reason: unknown
 ) => void;
 
+type TeardownCallback = () => void;
+type TeardownRef = React.MutableRefObject<TeardownCallback | undefined>;
+
 /**
  * Etsoo Braintree Error type
  */
@@ -174,9 +177,9 @@ export type EtsooBraintreePros = {
 
 async function createCard(
   clientInstance: Client,
+  ref: TeardownRef,
   options: CardOptions,
   amount: PaymentAmount,
-  hostedFieldsRef: React.MutableRefObject<HostedFields | undefined>,
   onPaymentRequestable: (
     button: HTMLElement,
     payload: PaymentPayload
@@ -232,8 +235,10 @@ async function createCard(
       })
       .then(
         (hFields) => {
-          // Reference
-          hostedFieldsRef.current = hFields;
+          // Teardown reference
+          ref.current = () => {
+            hFields.teardown();
+          };
 
           // Additional setup actions
           if (setup) setup(hFields);
@@ -315,6 +320,7 @@ function loadGooglePayScript() {
 
 async function createApplePay(
   clientInstance: Client,
+  ref: TeardownRef,
   options: ApplePayOptions,
   environment: EnvironmentType,
   amount: PaymentAmount,
@@ -330,9 +336,9 @@ async function createApplePay(
 
   // Create apple pay
   // https://braintree.github.io/braintree-web/current/module-braintree-web_apple-pay.html#.create
-  await applePay.create({ client: clientInstance });
+  const appPayInstance = await applePay.create({ client: clientInstance });
 
-  var paymentRequest = applePay.createPaymentRequest({
+  const paymentRequest = appPayInstance.createPaymentRequest({
     total: {
       label: totalLabel,
       amount: amount.total.toFixed(amount.fractionDigits ?? 2)
@@ -354,6 +360,15 @@ async function createApplePay(
         // ApplePaySession should be created each time a payment is explicitly requested by a customer,
         // such as inside an onclick event. Otherwise, it throws a JavaScript exception.
         const session = new ApplePaySession(3, paymentRequest);
+
+        session.oncancel = function (event) {
+          const error = new EtsooBraintreeDataError(
+            "ApplePay payment cancelled",
+            event
+          );
+          error.cause = "cancel";
+          onPaymentError(button, "applePay", error);
+        };
 
         session.onvalidatemerchant = function (event) {
           applePay
@@ -398,6 +413,7 @@ async function createApplePay(
 
 async function createGooglePay(
   clientInstance: Client,
+  ref: TeardownRef,
   options: GooglePayOptions,
   environment: EnvironmentType,
   amount: PaymentAmount,
@@ -469,6 +485,7 @@ async function createGooglePay(
 
 async function createPaypal(
   clientInstance: Client,
+  ref: TeardownRef,
   options: PaypalOptions,
   environment: EnvironmentType,
   amount: PaymentAmount,
@@ -495,6 +512,10 @@ async function createPaypal(
     client: clientInstance,
     merchantAccountId
   });
+
+  ref.current = () => {
+    payInstance.teardown();
+  };
 
   // Enable or disable funding resources within the portal site
   // Not in configuration
@@ -620,6 +641,7 @@ async function createPaypal(
 
 async function createLocalPayment(
   clientInstance: Client,
+  ref: TeardownRef,
   options: LocalPaymentOptions,
   environment: EnvironmentType,
   amount: PaymentAmount,
@@ -644,6 +666,10 @@ async function createLocalPayment(
     client: clientInstance,
     merchantAccountId
   });
+
+  ref.current = () => {
+    localPaymentInstance.teardown();
+  };
 
   return (button) => {
     if (button == null) return;
@@ -735,7 +761,13 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
   // States
   const [methods, setMethods] = React.useState<PaymentMethods>();
   const isMounted = React.useRef<boolean>();
-  const hostedFieldsRef = React.useRef<HostedFields>();
+  const teardownRefs = [
+    React.useRef<TeardownCallback>(),
+    React.useRef<TeardownCallback>(),
+    React.useRef<TeardownCallback>(),
+    React.useRef<TeardownCallback>(),
+    React.useRef<TeardownCallback>()
+  ];
 
   React.useEffect(() => {
     let newClient: Client | undefined;
@@ -770,6 +802,7 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
           try {
             const alipayRef = await createLocalPayment(
               clientInstance,
+              teardownRefs[0],
               { ...alipay, method: "alipay" },
               environment,
               amount,
@@ -792,6 +825,7 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
             ) {
               const applePayRef = await createApplePay(
                 clientInstance,
+                teardownRefs[1],
                 applePay,
                 environment,
                 amount,
@@ -812,9 +846,9 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
           try {
             const cardRef = await createCard(
               clientInstance,
+              teardownRefs[2],
               card,
               amount,
-              hostedFieldsRef,
               onPaymentRequestableLocal,
               onPaymentErrorLocal,
               threeDSecureInstance,
@@ -830,6 +864,7 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
           try {
             const googlePayRef = await createGooglePay(
               clientInstance,
+              teardownRefs[3],
               googlePay,
               environment,
               amount,
@@ -855,6 +890,7 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
           try {
             const paypalRef = await createPaypal(
               clientInstance,
+              teardownRefs[4],
               paypal,
               environment,
               amount,
@@ -877,18 +913,27 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
     );
 
     return () => {
-      if (threeDSecureInstance)
+      if (threeDSecureInstance) {
         threeDSecureInstance.off("lookup-complete", handler);
-
-      if (hostedFieldsRef.current) {
-        hostedFieldsRef.current.teardown();
-        hostedFieldsRef.current = undefined;
+        threeDSecureInstance = undefined;
       }
+
+      teardownRefs.forEach((ref, index) => {
+        if (ref.current) {
+          try {
+            ref.current();
+          } catch (e) {
+            console.log(`Teardown reference ${index}`, e);
+          }
+        }
+        ref.current = undefined;
+      });
 
       setMethods(undefined);
 
       if (newClient) {
         newClient.teardown(onTeardown);
+        newClient = undefined;
       }
       isMounted.current = false;
     };
