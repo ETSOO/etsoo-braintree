@@ -779,7 +779,7 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
       if (next) next();
     };
 
-    console.log("useEffect", isMounted.current, client);
+    console.log("useEffect", isMounted.current, authorization, amount);
 
     client.create({ authorization }).then(
       async (clientInstance) => {
