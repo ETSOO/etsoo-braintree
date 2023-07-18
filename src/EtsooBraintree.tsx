@@ -770,8 +770,6 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
   ];
 
   React.useEffect(() => {
-    let newClient: Client | undefined;
-
     let threeDSecureInstance: ThreeDSecure | undefined;
     const handler = (
       data?: ThreeDSecureVerificationData,
@@ -781,10 +779,10 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
       if (next) next();
     };
 
+    console.log("useEffect", isMounted.current, client);
+
     client.create({ authorization }).then(
       async (clientInstance) => {
-        // Cache the client
-        newClient = clientInstance;
         isMounted.current = true;
 
         // Payment methods
@@ -918,23 +916,6 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
         threeDSecureInstance = undefined;
       }
 
-      teardownRefs.forEach((ref, index) => {
-        if (ref.current) {
-          try {
-            ref.current();
-          } catch (e) {
-            console.log(`Teardown reference ${index}`, e);
-          }
-        }
-        ref.current = undefined;
-      });
-
-      setMethods(undefined);
-
-      if (newClient) {
-        newClient.teardown(onTeardown);
-        newClient = undefined;
-      }
       isMounted.current = false;
     };
   }, [authorization, amount]);
