@@ -779,7 +779,7 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
       if (next) next();
     };
 
-    console.log("useEffect", isMounted.current, authorization, amount);
+    console.log("useEffect", isMounted.current, amount);
 
     client.create({ authorization }).then(
       async (clientInstance) => {
@@ -918,7 +918,7 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
 
       isMounted.current = false;
     };
-  }, [authorization, amount]);
+  }, [authorization, JSON.stringify(amount)]);
 
   const childrenUI = React.useMemo(
     () =>
