@@ -912,13 +912,14 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
       );
     };
 
-    // Clear methods
-    console.log("methods", methods, typeof client.teardown);
-    if (methods) {
-      setMethods(undefined);
-    }
+    createMethods();
 
-    if (client.teardown) {
+    return () => {
+      if (threeDSecureInstance) {
+        threeDSecureInstance.off("lookup-complete", handler);
+        threeDSecureInstance = undefined;
+      }
+
       teardownRefs.forEach((ref, index) => {
         if (ref.current) {
           try {
@@ -930,19 +931,9 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
         ref.current = undefined;
       });
 
-      client.teardown(() => {
-        if (!isMounted.current) return;
-        createMethods();
-      });
-    } else {
-      createMethods();
-    }
+      if (methods) setMethods(undefined);
 
-    return () => {
-      if (threeDSecureInstance) {
-        threeDSecureInstance.off("lookup-complete", handler);
-        threeDSecureInstance = undefined;
-      }
+      if (client.teardown) client.teardown(() => {});
 
       isMounted.current = false;
     };
