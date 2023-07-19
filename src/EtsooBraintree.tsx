@@ -784,8 +784,6 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
       if (next) next();
     };
 
-    console.log("useEffect", clientRef.current, isMounted.current);
-
     isMounted.current = true;
 
     const createMethods = () => {
@@ -923,13 +921,34 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
     createMethods();
 
     return () => {
+      console.log(
+        "teardownRefs",
+        clientRef.current,
+        teardownRefs,
+        isMounted.current
+      );
+
       if (threeDSecureInstance) {
         threeDSecureInstance.off("lookup-complete", handler);
         threeDSecureInstance = undefined;
       }
 
+      if (methods) setMethods(undefined);
+
+      isMounted.current = false;
+    };
+  }, [authorization, JSON.stringify(amount)]);
+
+  React.useEffect(() => {
+    return () => {
+      console.log(
+        "teardownRefs One",
+        clientRef.current,
+        teardownRefs,
+        isMounted.current
+      );
       teardownRefs.forEach((ref, index) => {
-        console.log("teardownRefs", isMounted.current, ref.current, index);
+        console.log("teardownRef", isMounted.current, ref.current, index);
         if (ref.current) {
           try {
             ref.current();
@@ -944,16 +963,12 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
         ref.current = undefined;
       });
 
-      if (methods) setMethods(undefined);
-
       if (clientRef.current?.teardown) {
         clientRef.current.teardown(() => {});
         clientRef.current = undefined;
       }
-
-      isMounted.current = false;
     };
-  }, [authorization, JSON.stringify(amount)]);
+  }, []);
 
   const childrenUI = React.useMemo(
     () =>
