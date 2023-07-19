@@ -208,10 +208,13 @@ async function createCard(
       "number",
       "postalCode"
     ];
+
+    const htmlFields: HTMLElement[] = [];
     keys.forEach((key) => {
       const selector = `#${key}`;
       const keyField = container.querySelector<HTMLElement>(selector);
       if (keyField) {
+        htmlFields.push(keyField);
         // Pass properties with container's data-*
         const ds = keyField.dataset;
         const field: HostedFieldsField = {
@@ -234,13 +237,14 @@ async function createCard(
       })
       .then(
         (hFields) => {
+          // Additional setup actions
+          if (setup) setup(hFields);
+
           // Teardown reference
           ref.current = () => {
             hFields.teardown();
+            htmlFields.forEach((hf) => (hf.innerHTML = ""));
           };
-
-          // Additional setup actions
-          if (setup) setup(hFields);
 
           // Click handler
           submit.addEventListener("click", (event) => {
@@ -924,8 +928,12 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
         if (ref.current) {
           try {
             ref.current();
+            console.log(`Hosted feilds teardown at reference ${index}`);
           } catch (e) {
-            console.log(`Teardown reference ${index}`, e);
+            console.log(
+              `Hosted feilds teardown failed at reference ${index}`,
+              e
+            );
           }
         }
         ref.current = undefined;
