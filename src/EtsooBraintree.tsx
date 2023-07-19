@@ -771,6 +771,7 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
     React.useRef<TeardownCallback>(),
     React.useRef<TeardownCallback>()
   ];
+  const clientRef = React.useRef<Client>();
 
   React.useEffect(() => {
     let threeDSecureInstance: ThreeDSecure | undefined;
@@ -783,11 +784,14 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
       if (next) next();
     };
 
+    console.log("useEffect", clientRef.current, isMounted.current);
+
     isMounted.current = true;
 
     const createMethods = () => {
       client.create({ authorization }).then(
         async (clientInstance) => {
+          clientRef.current = clientInstance;
           if (!isMounted.current) return;
 
           // Payment methods
@@ -924,8 +928,8 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
         threeDSecureInstance = undefined;
       }
 
-      console.log("teardownRefs", client.teardown, teardownRefs);
       teardownRefs.forEach((ref, index) => {
+        console.log("teardownRefs", isMounted.current, ref.current, index);
         if (ref.current) {
           try {
             ref.current();
@@ -942,7 +946,10 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
 
       if (methods) setMethods(undefined);
 
-      if (client.teardown) client.teardown(() => {});
+      if (clientRef.current?.teardown) {
+        clientRef.current.teardown(() => {});
+        clientRef.current = undefined;
+      }
 
       isMounted.current = false;
     };
