@@ -924,6 +924,7 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
         threeDSecureInstance = undefined;
       }
 
+      console.log("teardownRefs", client.teardown, teardownRefs);
       teardownRefs.forEach((ref, index) => {
         if (ref.current) {
           try {
