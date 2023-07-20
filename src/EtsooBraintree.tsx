@@ -186,7 +186,7 @@ export type EtsooBraintreePros = {
 
 async function createCard(
   clientInstance: Client,
-  refs: RefType,
+  refs: React.MutableRefObject<RefType>,
   options: CardOptions,
   amount: PaymentAmount,
   onPaymentRequestable: (
@@ -248,7 +248,7 @@ async function createCard(
       .then(
         (hFields) => {
           // Teardown reference
-          refs.card = () => {
+          refs.current.card = () => {
             hFields.teardown();
             console.log("htmlFields", htmlFields);
             htmlFields.forEach((hf) => {
@@ -337,7 +337,7 @@ function loadGooglePayScript() {
 
 async function createApplePay(
   clientInstance: Client,
-  refs: RefType,
+  refs: React.MutableRefObject<RefType>,
   options: ApplePayOptions,
   environment: EnvironmentType,
   amount: PaymentAmount,
@@ -430,7 +430,7 @@ async function createApplePay(
 
 async function createGooglePay(
   clientInstance: Client,
-  refs: RefType,
+  refs: React.MutableRefObject<RefType>,
   options: GooglePayOptions,
   environment: EnvironmentType,
   amount: PaymentAmount,
@@ -502,7 +502,7 @@ async function createGooglePay(
 
 async function createPaypal(
   clientInstance: Client,
-  refs: RefType,
+  refs: React.MutableRefObject<RefType>,
   options: PaypalOptions,
   environment: EnvironmentType,
   amount: PaymentAmount,
@@ -530,7 +530,7 @@ async function createPaypal(
     merchantAccountId
   });
 
-  refs.paypal = () => {
+  refs.current.paypal = () => {
     payInstance.teardown();
   };
 
@@ -658,7 +658,7 @@ async function createPaypal(
 
 async function createLocalPayment(
   clientInstance: Client,
-  refs: RefType,
+  refs: React.MutableRefObject<RefType>,
   options: LocalPaymentOptions,
   environment: EnvironmentType,
   amount: PaymentAmount,
@@ -684,7 +684,7 @@ async function createLocalPayment(
     merchantAccountId
   });
 
-  refs.alipay = () => {
+  refs.current.alipay = () => {
     localPaymentInstance.teardown();
   };
 
@@ -814,7 +814,7 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
             try {
               const alipayRef = await createLocalPayment(
                 clientInstance,
-                refs.current,
+                refs,
                 { ...alipay, method: "alipay" },
                 environment,
                 amount,
@@ -837,7 +837,7 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
               ) {
                 const applePayRef = await createApplePay(
                   clientInstance,
-                  refs.current,
+                  refs,
                   applePay,
                   environment,
                   amount,
@@ -858,7 +858,7 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
             try {
               const cardRef = await createCard(
                 clientInstance,
-                refs.current,
+                refs,
                 card,
                 amount,
                 onPaymentRequestableLocal,
@@ -876,7 +876,7 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
             try {
               const googlePayRef = await createGooglePay(
                 clientInstance,
-                refs.current,
+                refs,
                 googlePay,
                 environment,
                 amount,
@@ -902,7 +902,7 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
             try {
               const paypalRef = await createPaypal(
                 clientInstance,
-                refs.current,
+                refs,
                 paypal,
                 environment,
                 amount,
@@ -936,19 +936,17 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
         refs.current.threeDSecureInstance = undefined;
       }
 
-      const keys = Object.keys(refs.current) as Array<keyof RefType>;
-      console.log("keys", keys);
-      for (const key of keys) {
-        const item = refs.current[key];
-        console.log(key, typeof item);
-        if (typeof item === "function") {
-          try {
-            refs.current[key] = undefined;
-            item();
-          } catch (ex) {
-            console.log(`Teardown for ${key} failed`, ex);
-          }
-        }
+      console.log("keys", Object.keys(refs.current));
+
+      if (refs.current.alipay) {
+        refs.current.alipay();
+        refs.current.alipay = undefined;
+      }
+
+      if (refs.current.card) {
+        console.log("card", refs.current.card);
+        refs.current.card();
+        refs.current.card = undefined;
       }
 
       if (refs.current.client?.teardown) {
