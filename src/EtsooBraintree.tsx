@@ -937,6 +937,7 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
 
       console.log("refs finished", refs);
 
+      /*
       for (const key of Object.keys(refs.current) as Array<keyof RefType>) {
         const item = refs.current[key];
         if (typeof item === "function") {
@@ -944,6 +945,7 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
           refs.current[key] = undefined;
         }
       }
+      */
 
       if (refs.current.client?.teardown) {
         refs.current.client.teardown(() => {});
