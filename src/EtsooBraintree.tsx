@@ -751,12 +751,6 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
   const refs = React.useRef<RefType>({});
 
   React.useEffect(() => {
-    console.log(
-      "useEffect",
-      refs.current.isMounted,
-      refs.current.client?.teardown == null
-    );
-
     if (refs.current.isMounted) return;
 
     // For debug <React.StrictMode> purpose
@@ -902,12 +896,6 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
     );
 
     return () => {
-      console.log(
-        "useEffect return",
-        refs.current.isMounted,
-        refs.current.client?.teardown == null
-      );
-
       const threeDSecureInstance = refs.current.threeDSecureInstance;
       if (threeDSecureInstance) {
         threeDSecureInstance.off("lookup-complete", handler);
