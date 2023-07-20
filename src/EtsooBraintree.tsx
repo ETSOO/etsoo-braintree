@@ -792,164 +792,147 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
 
     refs.current.isMounted = true;
 
-    const createMethods = () => {
-      client.create({ authorization }).then(
-        async (clientInstance) => {
-          // Client reference
-          refs.current.client = clientInstance;
+    client.create({ authorization }).then(
+      async (clientInstance) => {
+        // Client reference
+        refs.current.client = clientInstance;
 
-          // Payment methods
-          const items: PaymentMethods = {};
+        // Payment methods
+        const items: PaymentMethods = {};
 
-          const threeDSecureInstance = threeDSecureEnabled
-            ? await threeDSecure.create({ client: clientInstance, version: 2 })
-            : undefined;
+        const threeDSecureInstance = threeDSecureEnabled
+          ? await threeDSecure.create({ client: clientInstance, version: 2 })
+          : undefined;
 
-          if (threeDSecureInstance) {
-            refs.current.threeDSecureInstance = threeDSecureInstance;
-            threeDSecureInstance.on("lookup-complete", handler);
-          }
-
-          if (alipay) {
-            try {
-              const alipayRef = await createLocalPayment(
-                clientInstance,
-                refs,
-                { ...alipay, method: "alipay" },
-                environment,
-                amount,
-                onPaymentRequestableLocal,
-                onPaymentErrorLocal,
-                onPaymentStart
-              );
-              items.alipay = alipayRef;
-            } catch (error) {
-              onError("alipay", error);
-            }
-          }
-
-          if (applePay) {
-            try {
-              if (
-                "ApplePaySession" in globalThis &&
-                ApplePaySession.supportsVersion(3) &&
-                ApplePaySession.canMakePayments()
-              ) {
-                const applePayRef = await createApplePay(
-                  clientInstance,
-                  refs,
-                  applePay,
-                  environment,
-                  amount,
-                  onPaymentRequestableLocal,
-                  onPaymentErrorLocal,
-                  onPaymentStart
-                );
-                items.applePay = applePayRef;
-              } else {
-                console.log("This device does not support Apple Pay");
-              }
-            } catch (error) {
-              onError("applePay", error);
-            }
-          }
-
-          if (card) {
-            try {
-              const cardRef = await createCard(
-                clientInstance,
-                refs,
-                card,
-                amount,
-                onPaymentRequestableLocal,
-                onPaymentErrorLocal,
-                threeDSecureInstance,
-                onPaymentStart
-              );
-              items.card = cardRef;
-            } catch (error) {
-              onError("card", error);
-            }
-          }
-
-          if (googlePay) {
-            try {
-              const googlePayRef = await createGooglePay(
-                clientInstance,
-                refs,
-                googlePay,
-                environment,
-                amount,
-                onPaymentRequestableLocal,
-                onPaymentErrorLocal,
-                onPaymentStart
-              );
-
-              if (googlePayRef == null) {
-                onError(
-                  "googlePay",
-                  new Error("GooglePay API isReadyToPay failed")
-                );
-              } else {
-                items.googlePay = googlePayRef;
-              }
-            } catch (error) {
-              onError("googlePay", error);
-            }
-          }
-
-          if (paypal) {
-            try {
-              const paypalRef = await createPaypal(
-                clientInstance,
-                refs,
-                paypal,
-                environment,
-                amount,
-                onPaymentRequestableLocal,
-                onPaymentErrorLocal,
-                onPaymentStart
-              );
-              items.paypal = paypalRef;
-            } catch (error) {
-              onError("paypal", error);
-            }
-          }
-
-          // Update methods
-          setMethods(items);
-        },
-        (reason) => {
-          onError(undefined, reason);
+        if (threeDSecureInstance) {
+          refs.current.threeDSecureInstance = threeDSecureInstance;
+          threeDSecureInstance.on("lookup-complete", handler);
         }
-      );
-    };
 
-    createMethods();
+        if (alipay) {
+          try {
+            const alipayRef = await createLocalPayment(
+              clientInstance,
+              refs,
+              { ...alipay, method: "alipay" },
+              environment,
+              amount,
+              onPaymentRequestableLocal,
+              onPaymentErrorLocal,
+              onPaymentStart
+            );
+            items.alipay = alipayRef;
+          } catch (error) {
+            onError("alipay", error);
+          }
+        }
+
+        if (applePay) {
+          try {
+            if (
+              "ApplePaySession" in globalThis &&
+              ApplePaySession.supportsVersion(3) &&
+              ApplePaySession.canMakePayments()
+            ) {
+              const applePayRef = await createApplePay(
+                clientInstance,
+                refs,
+                applePay,
+                environment,
+                amount,
+                onPaymentRequestableLocal,
+                onPaymentErrorLocal,
+                onPaymentStart
+              );
+              items.applePay = applePayRef;
+            } else {
+              console.log("This device does not support Apple Pay");
+            }
+          } catch (error) {
+            onError("applePay", error);
+          }
+        }
+
+        if (card) {
+          try {
+            const cardRef = await createCard(
+              clientInstance,
+              refs,
+              card,
+              amount,
+              onPaymentRequestableLocal,
+              onPaymentErrorLocal,
+              threeDSecureInstance,
+              onPaymentStart
+            );
+            items.card = cardRef;
+          } catch (error) {
+            onError("card", error);
+          }
+        }
+
+        if (googlePay) {
+          try {
+            const googlePayRef = await createGooglePay(
+              clientInstance,
+              refs,
+              googlePay,
+              environment,
+              amount,
+              onPaymentRequestableLocal,
+              onPaymentErrorLocal,
+              onPaymentStart
+            );
+
+            if (googlePayRef == null) {
+              onError(
+                "googlePay",
+                new Error("GooglePay API isReadyToPay failed")
+              );
+            } else {
+              items.googlePay = googlePayRef;
+            }
+          } catch (error) {
+            onError("googlePay", error);
+          }
+        }
+
+        if (paypal) {
+          try {
+            const paypalRef = await createPaypal(
+              clientInstance,
+              refs,
+              paypal,
+              environment,
+              amount,
+              onPaymentRequestableLocal,
+              onPaymentErrorLocal,
+              onPaymentStart
+            );
+            items.paypal = paypalRef;
+          } catch (error) {
+            onError("paypal", error);
+          }
+        }
+
+        // Update methods
+        setMethods(items);
+      },
+      (reason) => {
+        onError(undefined, reason);
+      }
+    );
 
     return () => {
-      console.log("refs finished", refs);
-
+      console.log("refs.current", JSON.stringify(refs.current));
       const threeDSecureInstance = refs.current.threeDSecureInstance;
       if (threeDSecureInstance) {
         threeDSecureInstance.off("lookup-complete", handler);
         refs.current.threeDSecureInstance = undefined;
       }
 
-      console.log("keys", Object.keys(refs.current));
-
-      if (refs.current.alipay) {
-        refs.current.alipay();
-        refs.current.alipay = undefined;
-      }
-
-      if (refs.current.card) {
-        console.log("card", refs.current.card);
-        refs.current.card();
-        refs.current.card = undefined;
-      }
-
       if (refs.current.client?.teardown) {
+        console.log("refs.current.client");
         refs.current.client.teardown(() => {
           if (onTeardown) onTeardown();
         });
