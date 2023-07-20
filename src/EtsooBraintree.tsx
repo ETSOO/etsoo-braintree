@@ -250,6 +250,7 @@ async function createCard(
           // Teardown reference
           refs.card = () => {
             hFields.teardown();
+            console.log("htmlFields", htmlFields);
             htmlFields.forEach((hf) => {
               console.log(hf.tagName, hf.innerHTML);
               hf.innerHTML = "";
@@ -937,18 +938,19 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
 
       console.log("refs finished", refs);
 
-      /*
       for (const key of Object.keys(refs.current) as Array<keyof RefType>) {
         const item = refs.current[key];
+        console.log(key, typeof item);
         if (typeof item === "function") {
           item();
           refs.current[key] = undefined;
         }
       }
-      */
 
       if (refs.current.client?.teardown) {
-        refs.current.client.teardown(() => {});
+        refs.current.client.teardown(() => {
+          if (onTeardown) onTeardown();
+        });
         refs.current.client = undefined;
       }
 
