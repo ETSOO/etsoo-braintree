@@ -47,6 +47,16 @@ type PaymentErrorHandler = (
 type TeardownCallback = () => void;
 type TeardownRef = React.MutableRefObject<TeardownCallback | undefined>;
 
+type RefType = {
+  alipay?: TeardownCallback;
+  applePay?: TeardownCallback;
+  card?: TeardownCallback;
+  googlePay?: TeardownCallback;
+  paypal?: TeardownCallback;
+  client?: Client;
+  isMounted?: boolean;
+};
+
 /**
  * Etsoo Braintree Error type
  */
@@ -176,7 +186,7 @@ export type EtsooBraintreePros = {
 
 async function createCard(
   clientInstance: Client,
-  ref: TeardownRef,
+  refs: RefType,
   options: CardOptions,
   amount: PaymentAmount,
   onPaymentRequestable: (
@@ -237,14 +247,17 @@ async function createCard(
       })
       .then(
         (hFields) => {
+          // Teardown reference
+          refs.card = () => {
+            hFields.teardown();
+            htmlFields.forEach((hf) => {
+              console.log(hf.tagName, hf.innerHTML);
+              hf.innerHTML = "";
+            });
+          };
+
           // Additional setup actions
           if (setup) setup(hFields);
-
-          // Teardown reference
-          ref.current = () => {
-            hFields.teardown();
-            htmlFields.forEach((hf) => (hf.innerHTML = ""));
-          };
 
           // Click handler
           submit.addEventListener("click", (event) => {
@@ -323,7 +336,7 @@ function loadGooglePayScript() {
 
 async function createApplePay(
   clientInstance: Client,
-  ref: TeardownRef,
+  refs: RefType,
   options: ApplePayOptions,
   environment: EnvironmentType,
   amount: PaymentAmount,
@@ -416,7 +429,7 @@ async function createApplePay(
 
 async function createGooglePay(
   clientInstance: Client,
-  ref: TeardownRef,
+  refs: RefType,
   options: GooglePayOptions,
   environment: EnvironmentType,
   amount: PaymentAmount,
@@ -488,7 +501,7 @@ async function createGooglePay(
 
 async function createPaypal(
   clientInstance: Client,
-  ref: TeardownRef,
+  refs: RefType,
   options: PaypalOptions,
   environment: EnvironmentType,
   amount: PaymentAmount,
@@ -516,7 +529,7 @@ async function createPaypal(
     merchantAccountId
   });
 
-  ref.current = () => {
+  refs.paypal = () => {
     payInstance.teardown();
   };
 
@@ -644,7 +657,7 @@ async function createPaypal(
 
 async function createLocalPayment(
   clientInstance: Client,
-  ref: TeardownRef,
+  refs: RefType,
   options: LocalPaymentOptions,
   environment: EnvironmentType,
   amount: PaymentAmount,
@@ -670,7 +683,7 @@ async function createLocalPayment(
     merchantAccountId
   });
 
-  ref.current = () => {
+  refs.alipay = () => {
     localPaymentInstance.teardown();
   };
 
@@ -763,15 +776,9 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
 
   // States
   const [methods, setMethods] = React.useState<PaymentMethods>();
-  const isMounted = React.useRef<boolean>();
-  const teardownRefs = [
-    React.useRef<TeardownCallback>(),
-    React.useRef<TeardownCallback>(),
-    React.useRef<TeardownCallback>(),
-    React.useRef<TeardownCallback>(),
-    React.useRef<TeardownCallback>()
-  ];
-  const clientRef = React.useRef<Client>();
+
+  // Refs
+  const refs = React.useRef<RefType>({});
 
   React.useEffect(() => {
     let threeDSecureInstance: ThreeDSecure | undefined;
@@ -784,13 +791,15 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
       if (next) next();
     };
 
-    isMounted.current = true;
+    console.log("refs", refs);
+
+    refs.current.isMounted = true;
 
     const createMethods = () => {
       client.create({ authorization }).then(
         async (clientInstance) => {
-          clientRef.current = clientInstance;
-          if (!isMounted.current) return;
+          // Client reference
+          refs.current.client = clientInstance;
 
           // Payment methods
           const items: PaymentMethods = {};
@@ -807,7 +816,7 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
             try {
               const alipayRef = await createLocalPayment(
                 clientInstance,
-                teardownRefs[0],
+                refs.current,
                 { ...alipay, method: "alipay" },
                 environment,
                 amount,
@@ -830,7 +839,7 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
               ) {
                 const applePayRef = await createApplePay(
                   clientInstance,
-                  teardownRefs[1],
+                  refs.current,
                   applePay,
                   environment,
                   amount,
@@ -851,7 +860,7 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
             try {
               const cardRef = await createCard(
                 clientInstance,
-                teardownRefs[2],
+                refs.current,
                 card,
                 amount,
                 onPaymentRequestableLocal,
@@ -869,7 +878,7 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
             try {
               const googlePayRef = await createGooglePay(
                 clientInstance,
-                teardownRefs[3],
+                refs.current,
                 googlePay,
                 environment,
                 amount,
@@ -895,7 +904,7 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
             try {
               const paypalRef = await createPaypal(
                 clientInstance,
-                teardownRefs[4],
+                refs.current,
                 paypal,
                 environment,
                 amount,
@@ -921,61 +930,38 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
     createMethods();
 
     return () => {
-      console.log(
-        "teardownRefs",
-        clientRef.current,
-        teardownRefs,
-        isMounted.current
-      );
-
       if (threeDSecureInstance) {
         threeDSecureInstance.off("lookup-complete", handler);
         threeDSecureInstance = undefined;
       }
 
-      if (methods) setMethods(undefined);
+      console.log("refs finished", refs);
 
-      isMounted.current = false;
+      for (const key of Object.keys(refs.current) as Array<keyof RefType>) {
+        const item = refs.current[key];
+        if (typeof item === "function") {
+          item();
+          refs.current[key] = undefined;
+        }
+      }
+
+      if (refs.current.client?.teardown) {
+        refs.current.client.teardown(() => {});
+        refs.current.client = undefined;
+      }
+
+      refs.current.isMounted = false;
+
+      if (methods) setMethods(undefined);
     };
   }, [authorization, JSON.stringify(amount)]);
 
-  React.useEffect(() => {
-    return () => {
-      console.log(
-        "teardownRefs One",
-        clientRef.current,
-        teardownRefs,
-        isMounted.current
-      );
-      teardownRefs.forEach((ref, index) => {
-        console.log("teardownRef", isMounted.current, ref.current, index);
-        if (ref.current) {
-          try {
-            ref.current();
-            console.log(`Hosted feilds teardown at reference ${index}`);
-          } catch (e) {
-            console.log(
-              `Hosted feilds teardown failed at reference ${index}`,
-              e
-            );
-          }
-        }
-        ref.current = undefined;
-      });
-
-      if (clientRef.current?.teardown) {
-        clientRef.current.teardown(() => {});
-        clientRef.current = undefined;
-      }
-    };
-  }, []);
-
   const childrenUI = React.useMemo(
     () =>
-      methods == null || !isMounted.current
+      methods == null || !refs.current.isMounted
         ? onLoading()
         : children(methods, amount),
-    [methods, amount, onLoading, isMounted.current]
+    [methods, amount, onLoading, refs.current.isMounted]
   );
 
   return <React.Fragment>{childrenUI}</React.Fragment>;
