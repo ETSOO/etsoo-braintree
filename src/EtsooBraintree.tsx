@@ -759,6 +759,7 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
     };
 
     console.log(
+      Object.keys(methods ?? {}),
       authorization.substring(0, 5) + "..." + authorization.slice(-5),
       amount,
       refs.current.isMounted,
@@ -903,18 +904,10 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
 
       if (refs.current.client?.teardown) {
         try {
-          refs.current.client
-            .teardown(() => {
-              refs.current.client = undefined;
-              if (onTeardown) onTeardown();
-            })
-            .then(
-              () => {},
-              (reason) => {
-                console.log("Client teardown failed", reason);
-                refs.current.client = undefined;
-              }
-            );
+          refs.current.client.teardown(() => {
+            refs.current.client = undefined;
+            if (onTeardown) onTeardown();
+          });
         } catch (ex) {
           console.log("Client teardown exception", ex);
           refs.current.client = undefined;
