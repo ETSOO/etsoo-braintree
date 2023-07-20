@@ -751,7 +751,11 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
   const refs = React.useRef<RefType>({});
 
   React.useEffect(() => {
-    console.log(JSON.stringify(refs.current));
+    console.log(
+      "useEffect",
+      refs.current.isMounted,
+      refs.current.client?.teardown == null
+    );
 
     if (refs.current.isMounted) return;
 
@@ -888,6 +892,9 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
             onError("paypal", error);
           }
         }
+
+        // Re-render
+        setMethods(items);
       },
       (reason) => {
         onError(undefined, reason);
@@ -895,6 +902,12 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
     );
 
     return () => {
+      console.log(
+        "useEffect return",
+        refs.current.isMounted,
+        refs.current.client?.teardown == null
+      );
+
       const threeDSecureInstance = refs.current.threeDSecureInstance;
       if (threeDSecureInstance) {
         threeDSecureInstance.off("lookup-complete", handler);
