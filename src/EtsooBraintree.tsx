@@ -758,6 +758,14 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
       if (next) next();
     };
 
+    console.log(
+      authorization.substring(0, 5) + "..." + authorization.slice(-5),
+      amount,
+      refs.current.isMounted,
+      refs.current.client?.teardown == null,
+      client.teardown == null
+    );
+
     refs.current.isMounted = true;
 
     client.create({ authorization }).then(
