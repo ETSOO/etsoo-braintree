@@ -45,7 +45,6 @@ type PaymentErrorHandler = (
 ) => void;
 
 type TeardownCallback = () => void;
-type TeardownRef = React.MutableRefObject<TeardownCallback | undefined>;
 
 type RefType = {
   alipay?: TeardownCallback;
@@ -54,6 +53,7 @@ type RefType = {
   googlePay?: TeardownCallback;
   paypal?: TeardownCallback;
   client?: Client;
+  threeDSecureInstance?: ThreeDSecure;
   isMounted?: boolean;
 };
 
@@ -782,8 +782,6 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
   const refs = React.useRef<RefType>({});
 
   React.useEffect(() => {
-    let threeDSecureInstance: ThreeDSecure | undefined;
-
     const handler = (
       data?: ThreeDSecureVerificationData,
       next?: () => void
@@ -791,8 +789,6 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
       console.log("lookup-complete", data);
       if (next) next();
     };
-
-    console.log("refs", refs);
 
     refs.current.isMounted = true;
 
@@ -805,11 +801,12 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
           // Payment methods
           const items: PaymentMethods = {};
 
-          threeDSecureInstance = threeDSecureEnabled
+          const threeDSecureInstance = threeDSecureEnabled
             ? await threeDSecure.create({ client: clientInstance, version: 2 })
             : undefined;
 
           if (threeDSecureInstance) {
+            refs.current.threeDSecureInstance = threeDSecureInstance;
             threeDSecureInstance.on("lookup-complete", handler);
           }
 
@@ -931,19 +928,26 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
     createMethods();
 
     return () => {
-      if (threeDSecureInstance) {
-        threeDSecureInstance.off("lookup-complete", handler);
-        threeDSecureInstance = undefined;
-      }
-
       console.log("refs finished", refs);
 
-      for (const key of Object.keys(refs.current) as Array<keyof RefType>) {
+      const threeDSecureInstance = refs.current.threeDSecureInstance;
+      if (threeDSecureInstance) {
+        threeDSecureInstance.off("lookup-complete", handler);
+        refs.current.threeDSecureInstance = undefined;
+      }
+
+      const keys = Object.keys(refs.current) as Array<keyof RefType>;
+      console.log("keys", keys);
+      for (const key of keys) {
         const item = refs.current[key];
         console.log(key, typeof item);
         if (typeof item === "function") {
-          item();
-          refs.current[key] = undefined;
+          try {
+            refs.current[key] = undefined;
+            item();
+          } catch (ex) {
+            console.log(`Teardown for ${key} failed`, ex);
+          }
         }
       }
 
