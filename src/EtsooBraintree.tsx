@@ -751,7 +751,9 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
   const refs = React.useRef<RefType>({});
 
   React.useEffect(() => {
-    console.log(refs.current);
+    console.log(JSON.stringify(refs.current));
+
+    if (refs.current.isMounted) return;
 
     // For debug <React.StrictMode> purpose
     const miliseconds = Date.now();
@@ -768,12 +770,11 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
       if (next) next();
     };
 
-    refs.current.isMounted = true;
-
     client.create({ authorization }).then(
       async (clientInstance) => {
         // Client reference
         refs.current.client = clientInstance;
+        refs.current.isMounted = true;
 
         // Payment methods
         const items: PaymentMethods = {};
@@ -907,11 +908,6 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
             refs.current.isMounted = false;
             if (onTeardown) onTeardown();
           });
-
-          // Make sure teardown completed
-          while (refs.current.isMounted) {
-            console.log("Teardown", Date.now());
-          }
         } catch (ex) {
           console.log("Client teardown exception", ex);
           refs.current.client = undefined;
