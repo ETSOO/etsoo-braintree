@@ -48,6 +48,7 @@ type RefType = {
   client?: Client;
   threeDSecureInstance?: ThreeDSecure;
   isMounted?: boolean;
+  creation?: number;
 };
 
 /**
@@ -750,6 +751,15 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
   const refs = React.useRef<RefType>({});
 
   React.useEffect(() => {
+    console.log(refs.current);
+
+    // For debug <React.StrictMode> purpose
+    const miliseconds = Date.now();
+    if (refs.current.creation && miliseconds - refs.current.creation < 100) {
+      return;
+    }
+    refs.current.creation = miliseconds;
+
     const handler = (
       data?: ThreeDSecureVerificationData,
       next?: () => void
@@ -757,15 +767,6 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
       console.log("lookup-complete", data);
       if (next) next();
     };
-
-    console.log(
-      Object.keys(methods ?? {}),
-      authorization.substring(0, 5) + "..." + authorization.slice(-5),
-      amount,
-      refs.current.isMounted,
-      refs.current.client?.teardown == null,
-      client.teardown == null
-    );
 
     refs.current.isMounted = true;
 
@@ -886,9 +887,6 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
             onError("paypal", error);
           }
         }
-
-        // Update methods
-        setMethods(items);
       },
       (reason) => {
         onError(undefined, reason);
@@ -906,15 +904,20 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
         try {
           refs.current.client.teardown(() => {
             refs.current.client = undefined;
+            refs.current.isMounted = false;
             if (onTeardown) onTeardown();
           });
+
+          // Make sure teardown completed
+          while (refs.current.isMounted) {
+            console.log("Teardown", Date.now());
+          }
         } catch (ex) {
           console.log("Client teardown exception", ex);
           refs.current.client = undefined;
+          refs.current.isMounted = false;
         }
       }
-
-      refs.current.isMounted = false;
 
       if (methods) setMethods(undefined);
     };
