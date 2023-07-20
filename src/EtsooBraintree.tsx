@@ -44,14 +44,7 @@ type PaymentErrorHandler = (
   reason: unknown
 ) => void;
 
-type TeardownCallback = () => void;
-
 type RefType = {
-  alipay?: TeardownCallback;
-  applePay?: TeardownCallback;
-  card?: TeardownCallback;
-  googlePay?: TeardownCallback;
-  paypal?: TeardownCallback;
   client?: Client;
   threeDSecureInstance?: ThreeDSecure;
   isMounted?: boolean;
@@ -186,7 +179,6 @@ export type EtsooBraintreePros = {
 
 async function createCard(
   clientInstance: Client,
-  refs: React.MutableRefObject<RefType>,
   options: CardOptions,
   amount: PaymentAmount,
   onPaymentRequestable: (
@@ -219,12 +211,10 @@ async function createCard(
       "postalCode"
     ];
 
-    const htmlFields: HTMLElement[] = [];
     keys.forEach((key) => {
       const selector = `#${key}`;
       const keyField = container.querySelector<HTMLElement>(selector);
       if (keyField) {
-        htmlFields.push(keyField);
         // Pass properties with container's data-*
         const ds = keyField.dataset;
         const field: HostedFieldsField = {
@@ -247,16 +237,6 @@ async function createCard(
       })
       .then(
         (hFields) => {
-          // Teardown reference
-          refs.current.card = () => {
-            hFields.teardown();
-            console.log("htmlFields", htmlFields);
-            htmlFields.forEach((hf) => {
-              console.log(hf.tagName, hf.innerHTML);
-              hf.innerHTML = "";
-            });
-          };
-
           // Additional setup actions
           if (setup) setup(hFields);
 
@@ -337,7 +317,6 @@ function loadGooglePayScript() {
 
 async function createApplePay(
   clientInstance: Client,
-  refs: React.MutableRefObject<RefType>,
   options: ApplePayOptions,
   environment: EnvironmentType,
   amount: PaymentAmount,
@@ -430,7 +409,6 @@ async function createApplePay(
 
 async function createGooglePay(
   clientInstance: Client,
-  refs: React.MutableRefObject<RefType>,
   options: GooglePayOptions,
   environment: EnvironmentType,
   amount: PaymentAmount,
@@ -502,7 +480,6 @@ async function createGooglePay(
 
 async function createPaypal(
   clientInstance: Client,
-  refs: React.MutableRefObject<RefType>,
   options: PaypalOptions,
   environment: EnvironmentType,
   amount: PaymentAmount,
@@ -529,10 +506,6 @@ async function createPaypal(
     client: clientInstance,
     merchantAccountId
   });
-
-  refs.current.paypal = () => {
-    payInstance.teardown();
-  };
 
   // Enable or disable funding resources within the portal site
   // Not in configuration
@@ -658,7 +631,6 @@ async function createPaypal(
 
 async function createLocalPayment(
   clientInstance: Client,
-  refs: React.MutableRefObject<RefType>,
   options: LocalPaymentOptions,
   environment: EnvironmentType,
   amount: PaymentAmount,
@@ -683,10 +655,6 @@ async function createLocalPayment(
     client: clientInstance,
     merchantAccountId
   });
-
-  refs.current.alipay = () => {
-    localPaymentInstance.teardown();
-  };
 
   return (button) => {
     if (button == null) return;
@@ -813,7 +781,6 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
           try {
             const alipayRef = await createLocalPayment(
               clientInstance,
-              refs,
               { ...alipay, method: "alipay" },
               environment,
               amount,
@@ -836,7 +803,6 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
             ) {
               const applePayRef = await createApplePay(
                 clientInstance,
-                refs,
                 applePay,
                 environment,
                 amount,
@@ -857,7 +823,6 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
           try {
             const cardRef = await createCard(
               clientInstance,
-              refs,
               card,
               amount,
               onPaymentRequestableLocal,
@@ -875,7 +840,6 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
           try {
             const googlePayRef = await createGooglePay(
               clientInstance,
-              refs,
               googlePay,
               environment,
               amount,
@@ -901,7 +865,6 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
           try {
             const paypalRef = await createPaypal(
               clientInstance,
-              refs,
               paypal,
               environment,
               amount,
@@ -924,7 +887,6 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
     );
 
     return () => {
-      console.log("refs.current", JSON.stringify(refs.current));
       const threeDSecureInstance = refs.current.threeDSecureInstance;
       if (threeDSecureInstance) {
         threeDSecureInstance.off("lookup-complete", handler);
@@ -932,11 +894,23 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
       }
 
       if (refs.current.client?.teardown) {
-        console.log("refs.current.client");
-        refs.current.client.teardown(() => {
-          if (onTeardown) onTeardown();
-        });
-        refs.current.client = undefined;
+        try {
+          refs.current.client
+            .teardown(() => {
+              refs.current.client = undefined;
+              if (onTeardown) onTeardown();
+            })
+            .then(
+              () => {},
+              (reason) => {
+                console.log("Client teardown failed", reason);
+                refs.current.client = undefined;
+              }
+            );
+        } catch (ex) {
+          console.log("Client teardown exception", ex);
+          refs.current.client = undefined;
+        }
       }
 
       refs.current.isMounted = false;
