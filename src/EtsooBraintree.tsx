@@ -298,13 +298,13 @@ async function createCard(
   };
 }
 
-function loadGooglePayScript() {
-  if (typeof google != "undefined" && google?.payments?.api?.PaymentsClient)
-    return Promise.resolve();
+function loadApplePayScript() {
+  if (typeof ApplePaySession != "undefined") return Promise.resolve();
 
   return new Promise<void>((resolve, reject) => {
     const script = document.createElement("script");
-    script.src = "https://pay.google.com/gp/p/js/pay.js";
+    script.src =
+      "https://js.braintreegateway.com/web/3.96.1/js/apple-pay.min.js";
     script.async = true;
     script.onerror = (err) => {
       reject(err);
@@ -406,6 +406,24 @@ async function createApplePay(
       }
     });
   };
+}
+
+function loadGooglePayScript() {
+  if (typeof google != "undefined" && google?.payments?.api?.PaymentsClient)
+    return Promise.resolve();
+
+  return new Promise<void>((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "https://pay.google.com/gp/p/js/pay.js";
+    script.async = true;
+    script.onerror = (err) => {
+      reject(err);
+    };
+    script.onload = () => {
+      resolve();
+    };
+    document.head.appendChild(script);
+  });
 }
 
 async function createGooglePay(
@@ -805,23 +823,30 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
 
         if (applePay) {
           try {
-            const ap = (globalThis as any).ApplePaySession;
-            console.log("ap", ap);
-            if (
-              "ApplePaySession" in globalThis &&
-              ApplePaySession.supportsVersion(3) &&
-              ApplePaySession.canMakePayments()
-            ) {
-              const applePayRef = await createApplePay(
-                clientInstance,
-                applePay,
-                environment,
-                amount,
-                onPaymentRequestableLocal,
-                onPaymentErrorLocal,
-                onPaymentStart
-              );
-              items.applePay = applePayRef;
+            if ("ApplePaySession" in globalThis) {
+              // Load script
+              await loadApplePayScript();
+
+              if (
+                ApplePaySession.supportsVersion(3) &&
+                ApplePaySession.canMakePayments()
+              ) {
+                const applePayRef = await createApplePay(
+                  clientInstance,
+                  applePay,
+                  environment,
+                  amount,
+                  onPaymentRequestableLocal,
+                  onPaymentErrorLocal,
+                  onPaymentStart
+                );
+                items.applePay = applePayRef;
+              } else {
+                onError(
+                  "applePay",
+                  new Error("This device cannot make payments")
+                );
+              }
             } else {
               console.log("This device does not support Apple Pay");
             }
