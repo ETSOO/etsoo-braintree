@@ -303,6 +303,7 @@ async function createApplePay(
   options: ApplePayOptions,
   environment: EnvironmentType,
   amount: PaymentAmount,
+  ApplePaySessionClass: typeof ApplePaySession,
   onPaymentRequestable: (
     button: HTMLElement,
     payload: PaymentPayload
@@ -338,7 +339,7 @@ async function createApplePay(
       try {
         // ApplePaySession should be created each time a payment is explicitly requested by a customer,
         // such as inside an onclick event. Otherwise, it throws a JavaScript exception.
-        const session = new ApplePaySession(3, paymentRequest);
+        const session = new ApplePaySessionClass(3, paymentRequest);
 
         session.oncancel = function (event) {
           const error = new EtsooBraintreeDataError(
@@ -374,11 +375,11 @@ async function createApplePay(
               // After you have transacted with the payload.nonce,
               // call 'completePayment' to dismiss the Apple Pay sheet.
               onPaymentRequestable(button, payload);
-              session.completePayment(ApplePaySession.STATUS_SUCCESS);
+              session.completePayment(ApplePaySessionClass.STATUS_SUCCESS);
             })
             .catch(function (tokenizeErr) {
               onPaymentError(button, "applePay", tokenizeErr);
-              session.completePayment(ApplePaySession.STATUS_FAILURE);
+              session.completePayment(ApplePaySessionClass.STATUS_FAILURE);
             });
         };
 
@@ -806,14 +807,26 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
         if (applePay) {
           try {
             if ("ApplePaySession" in globalThis) {
-              const aps = (globalThis as any).ApplePaySession;
-              console.log(aps.STATUS_SUCCESS, aps.STATUS_FAILURE, new aps());
-              if (aps.supportsVersion(3) && aps.canMakePayments()) {
+              const ApplePaySessionClass: typeof ApplePaySession = (
+                globalThis as any
+              ).ApplePaySession;
+
+              console.log(
+                ApplePaySessionClass.STATUS_SUCCESS,
+                ApplePaySessionClass.STATUS_FAILURE,
+                ApplePaySessionClass.supportsVersion
+              );
+
+              if (
+                ApplePaySessionClass.supportsVersion(3) &&
+                ApplePaySessionClass.canMakePayments()
+              ) {
                 const applePayRef = await createApplePay(
                   clientInstance,
                   applePay,
                   environment,
                   amount,
+                  ApplePaySessionClass,
                   onPaymentRequestableLocal,
                   onPaymentErrorLocal,
                   onPaymentStart
