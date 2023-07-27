@@ -805,6 +805,8 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
 
         if (applePay) {
           try {
+            const ap = (globalThis as any).ApplePaySession;
+            console.log("ap", ap);
             if (
               "ApplePaySession" in globalThis &&
               ApplePaySession.supportsVersion(3) &&
