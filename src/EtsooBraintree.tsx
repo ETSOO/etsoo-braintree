@@ -811,12 +811,6 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
                 globalThis as any
               ).ApplePaySession;
 
-              console.log(
-                ApplePaySessionClass.STATUS_SUCCESS,
-                ApplePaySessionClass.STATUS_FAILURE,
-                ApplePaySessionClass.supportsVersion
-              );
-
               if (
                 ApplePaySessionClass.supportsVersion(3) &&
                 ApplePaySessionClass.canMakePayments()
