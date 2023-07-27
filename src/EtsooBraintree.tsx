@@ -807,15 +807,8 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
           try {
             if ("ApplePaySession" in globalThis) {
               const aps = (globalThis as any).ApplePaySession;
-              console.log(
-                typeof ApplePaySession,
-                aps.supportsVersion,
-                aps.canMakePayments
-              );
-              if (
-                ApplePaySession.supportsVersion(3) &&
-                ApplePaySession.canMakePayments()
-              ) {
+              console.log(aps.STATUS_SUCCESS, aps.STATUS_FAILURE, new aps());
+              if (aps.supportsVersion(3) && aps.canMakePayments()) {
                 const applePayRef = await createApplePay(
                   clientInstance,
                   applePay,
