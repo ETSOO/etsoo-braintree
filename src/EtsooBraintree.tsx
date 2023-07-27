@@ -298,24 +298,6 @@ async function createCard(
   };
 }
 
-function loadApplePayScript() {
-  if (typeof ApplePaySession != "undefined") return Promise.resolve();
-
-  return new Promise<void>((resolve, reject) => {
-    const script = document.createElement("script");
-    script.src =
-      "https://js.braintreegateway.com/web/3.96.1/js/apple-pay.min.js";
-    script.async = true;
-    script.onerror = (err) => {
-      reject(err);
-    };
-    script.onload = () => {
-      resolve();
-    };
-    document.head.appendChild(script);
-  });
-}
-
 async function createApplePay(
   clientInstance: Client,
   options: ApplePayOptions,
@@ -824,9 +806,12 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
         if (applePay) {
           try {
             if ("ApplePaySession" in globalThis) {
-              // Load script
-              await loadApplePayScript();
-
+              const aps = (globalThis as any).ApplePaySession;
+              console.log(
+                typeof ApplePaySession,
+                aps.supportsVersion,
+                aps.canMakePayments
+              );
               if (
                 ApplePaySession.supportsVersion(3) &&
                 ApplePaySession.canMakePayments()
