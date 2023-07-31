@@ -450,26 +450,42 @@ async function createGooglePay(
   });
 
   // Google payment isReadyToPay response
-  paymentClient
-    .isReadyToPay({
+  try {
+    const response = await paymentClient.isReadyToPay({
       apiVersion: request.apiVersion,
       apiVersionMinor: request.apiVersionMinor,
       allowedPaymentMethods: request.allowedPaymentMethods,
       existingPaymentMethodRequired: true
-    })
-    .then(
-      (response) => {
-        console.log("response", response.result, response);
-      },
-      (reason) => {
-        console.log("onRejected", reason);
-      }
-    )
-    .catch((reason) => {
-      console.log("catch", reason);
     });
 
-  return undefined;
+    console.log("response", response.result, response);
+
+    if (response.result) {
+      return (button) => {
+        if (button == null) return;
+
+        button.addEventListener("click", async (event) => {
+          if (onPaymentStart && onPaymentStart(event, button) === false) return;
+
+          try {
+            // Load payment data
+            const paymentData = await paymentClient.loadPaymentData(request);
+
+            // Parse payment data response
+            const paymentResponse = await paymentInstance.parseResponse(
+              paymentData
+            );
+
+            onPaymentRequestable(button, paymentResponse);
+          } catch (ex) {
+            onPaymentError(button, "googlePay", ex);
+          }
+        });
+      };
+    }
+  } catch (ex) {
+    console.log("ex", ex);
+  }
 }
 
 async function createPaypal(
