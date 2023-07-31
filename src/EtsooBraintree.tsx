@@ -392,13 +392,10 @@ async function createApplePay(
 }
 
 function loadGooglePayScript() {
-  console.log("loadGooglePayScript", typeof google);
   if (typeof google != "undefined" && google?.payments?.api?.PaymentsClient)
     return Promise.resolve();
 
   return new Promise<void>((resolve, reject) => {
-    console.log("loadGooglePayScript", document.head);
-
     const script = document.createElement("script");
     script.src = "https://pay.google.com/gp/p/js/pay.js";
     script.async = true;
@@ -407,7 +404,6 @@ function loadGooglePayScript() {
       reject(err);
     };
     script.onload = () => {
-      console.log("script.onload");
       resolve();
     };
     document.head.appendChild(script);
@@ -439,10 +435,14 @@ async function createGooglePay(
     googleMerchantId: merchantId
   });
 
+  console.log("paymentInstance", paymentInstance);
+
   // Google payment client
   const paymentClient = new google.payments.api.PaymentsClient({
     environment
   });
+
+  console.log("paymentClient", paymentClient);
 
   // Google payment request
   const request = await paymentInstance.createPaymentDataRequest({
@@ -453,6 +453,8 @@ async function createGooglePay(
     }
   });
 
+  console.log("request", request);
+
   // Google payment isReadyToPay response
   const response = await paymentClient.isReadyToPay({
     apiVersion: version,
@@ -460,6 +462,9 @@ async function createGooglePay(
     allowedPaymentMethods: request.allowedPaymentMethods,
     existingPaymentMethodRequired: true
   });
+
+  console.log("response", response.result, response);
+
   if (response.result) {
     return (button) => {
       if (button == null) return;
