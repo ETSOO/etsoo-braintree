@@ -451,34 +451,26 @@ async function createGooglePay(
 
   // Google payment isReadyToPay response
   // Safari failed to catch errors with await paymentClient.isReadyToPay
-  const response = await new Promise<google.payments.api.IsReadyToPayResponse>(
-    (resolve, reject) => {
-      try {
-        paymentClient
-          .isReadyToPay({
-            apiVersion: request.apiVersion,
-            apiVersionMinor: request.apiVersionMinor,
-            allowedPaymentMethods: request.allowedPaymentMethods,
-            existingPaymentMethodRequired: true
-          })
-          .then(
-            (response) => {
-              console.log("resolve", response);
-              resolve(response);
-            },
-            (reason) => {
-              console.log("reject", reason);
-              reject(reason);
-            }
-          )
-          .catch((reason) => console.log("response", reason));
-      } catch (error) {
-        console.log("catch", error);
-        reject(error);
-      }
-    }
-  );
-  console.log("response", response);
+  try {
+    paymentClient
+      .isReadyToPay({
+        apiVersion: request.apiVersion,
+        apiVersionMinor: request.apiVersionMinor,
+        allowedPaymentMethods: request.allowedPaymentMethods,
+        existingPaymentMethodRequired: true
+      })
+      .then(
+        (response) => {
+          console.log("resolve", response);
+        },
+        (reason) => {
+          console.log("reject", reason);
+        }
+      )
+      .catch((reason) => console.log("response", reason));
+  } catch (error) {
+    console.log("catch", error);
+  }
 
   /*
   const response = await paymentClient.isReadyToPay({
@@ -489,7 +481,7 @@ async function createGooglePay(
   });
   */
 
-  if (response.result) {
+  if (true) {
     return (button) => {
       if (button == null) return;
 
