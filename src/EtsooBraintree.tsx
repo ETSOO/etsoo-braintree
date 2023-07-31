@@ -451,37 +451,19 @@ async function createGooglePay(
 
   // Google payment isReadyToPay response
   // Safari failed to catch errors with await paymentClient.isReadyToPay
-  try {
-    paymentClient
-      .isReadyToPay({
+  var isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+  console.log("isSafari", isSafari);
+  if (
+    isSafari ||
+    (
+      await paymentClient.isReadyToPay({
         apiVersion: request.apiVersion,
         apiVersionMinor: request.apiVersionMinor,
         allowedPaymentMethods: request.allowedPaymentMethods,
         existingPaymentMethodRequired: true
       })
-      .then(
-        (response) => {
-          console.log("resolve", response);
-        },
-        (reason) => {
-          console.log("reject", reason);
-        }
-      )
-      .catch((reason) => console.log("response", reason));
-  } catch (error) {
-    console.log("catch", error);
-  }
-
-  /*
-  const response = await paymentClient.isReadyToPay({
-    apiVersion: request.apiVersion,
-    apiVersionMinor: request.apiVersionMinor,
-    allowedPaymentMethods: request.allowedPaymentMethods,
-    existingPaymentMethodRequired: true
-  });
-  */
-
-  if (true) {
+    ).result
+  ) {
     return (button) => {
       if (button == null) return;
 
