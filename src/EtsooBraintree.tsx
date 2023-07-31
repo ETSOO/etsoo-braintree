@@ -330,8 +330,6 @@ async function createApplePay(
     requiredBillingContactFields: ["postalAddress"]
   });
 
-  console.log("paymentRequest", paymentRequest);
-
   return (button) => {
     if (button == null) return;
 
@@ -394,17 +392,22 @@ async function createApplePay(
 }
 
 function loadGooglePayScript() {
+  console.log("loadGooglePayScript", typeof google);
   if (typeof google != "undefined" && google?.payments?.api?.PaymentsClient)
     return Promise.resolve();
 
   return new Promise<void>((resolve, reject) => {
+    console.log("loadGooglePayScript", document.head);
+
     const script = document.createElement("script");
     script.src = "https://pay.google.com/gp/p/js/pay.js";
     script.async = true;
     script.onerror = (err) => {
+      console.log("script.onerror", err);
       reject(err);
     };
     script.onload = () => {
+      console.log("script.onload");
       resolve();
     };
     document.head.appendChild(script);
@@ -842,8 +845,6 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
           }
         }
 
-        console.log("applePay is done", applePay);
-
         if (card) {
           try {
             const cardRef = await createCard(
@@ -860,8 +861,6 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
             onError("card", error);
           }
         }
-
-        console.log("card is done", card);
 
         if (googlePay) {
           try {
