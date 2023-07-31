@@ -314,9 +314,13 @@ async function createApplePay(
   // Destruct
   const { totalLabel = "" } = options;
 
+  console.log("applePay", typeof applePay);
+
   // Create apple pay
   // https://braintree.github.io/braintree-web/current/module-braintree-web_apple-pay.html#.create
   const appPayInstance = await applePay.create({ client: clientInstance });
+
+  console.log("appPayInstance", appPayInstance);
 
   const paymentRequest = appPayInstance.createPaymentRequest({
     total: {
@@ -810,6 +814,12 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
               const ApplePaySessionClass: typeof ApplePaySession = (
                 globalThis as any
               ).ApplePaySession;
+
+              console.log(
+                "ApplePaySessionClass",
+                ApplePaySessionClass.supportsVersion(3),
+                ApplePaySessionClass.canMakePayments()
+              );
 
               if (
                 ApplePaySessionClass.supportsVersion(3) &&
