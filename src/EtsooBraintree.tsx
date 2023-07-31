@@ -450,41 +450,35 @@ async function createGooglePay(
   });
 
   // Google payment isReadyToPay response
-  try {
-    const response = await paymentClient.isReadyToPay({
-      apiVersion: request.apiVersion,
-      apiVersionMinor: request.apiVersionMinor,
-      allowedPaymentMethods: request.allowedPaymentMethods,
-      existingPaymentMethodRequired: true
-    });
+  const response = await paymentClient.isReadyToPay({
+    apiVersion: request.apiVersion,
+    apiVersionMinor: request.apiVersionMinor,
+    allowedPaymentMethods: request.allowedPaymentMethods,
+    existingPaymentMethodRequired: true
+  });
 
-    console.log("response", response.result, response);
+  if (response?.result) {
+    return (button) => {
+      if (button == null) return;
 
-    if (response.result) {
-      return (button) => {
-        if (button == null) return;
+      button.addEventListener("click", async (event) => {
+        if (onPaymentStart && onPaymentStart(event, button) === false) return;
 
-        button.addEventListener("click", async (event) => {
-          if (onPaymentStart && onPaymentStart(event, button) === false) return;
+        try {
+          // Load payment data
+          const paymentData = await paymentClient.loadPaymentData(request);
 
-          try {
-            // Load payment data
-            const paymentData = await paymentClient.loadPaymentData(request);
+          // Parse payment data response
+          const paymentResponse = await paymentInstance.parseResponse(
+            paymentData
+          );
 
-            // Parse payment data response
-            const paymentResponse = await paymentInstance.parseResponse(
-              paymentData
-            );
-
-            onPaymentRequestable(button, paymentResponse);
-          } catch (ex) {
-            onPaymentError(button, "googlePay", ex);
-          }
-        });
-      };
-    }
-  } catch (ex) {
-    console.log("ex", ex);
+          onPaymentRequestable(button, paymentResponse);
+        } catch (ex) {
+          onPaymentError(button, "googlePay", ex);
+        }
+      });
+    };
   }
 }
 
@@ -890,8 +884,6 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
           }
         }
 
-        console.log("googlePay is done", googlePay);
-
         if (paypal) {
           try {
             const paypalRef = await createPaypal(
@@ -908,8 +900,6 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
             onError("paypal", error);
           }
         }
-
-        console.log("paypal is done", paypal);
 
         // Re-render
         setMethods(items);
