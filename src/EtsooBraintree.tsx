@@ -450,14 +450,37 @@ async function createGooglePay(
   });
 
   // Google payment isReadyToPay response
+  // Safari failed to catch errors with await paymentClient.isReadyToPay
+  const response = await new Promise<google.payments.api.IsReadyToPayResponse>(
+    (result, reject) => {
+      try {
+        paymentClient
+          .isReadyToPay({
+            apiVersion: request.apiVersion,
+            apiVersionMinor: request.apiVersionMinor,
+            allowedPaymentMethods: request.allowedPaymentMethods,
+            existingPaymentMethodRequired: true
+          })
+          .then((response) => {
+            result(response);
+          })
+          .catch((reason) => console.log("response", reason));
+      } catch (error) {
+        reject(error);
+      }
+    }
+  );
+
+  /*
   const response = await paymentClient.isReadyToPay({
     apiVersion: request.apiVersion,
     apiVersionMinor: request.apiVersionMinor,
     allowedPaymentMethods: request.allowedPaymentMethods,
     existingPaymentMethodRequired: true
   });
+  */
 
-  if (response?.result) {
+  if (response.result) {
     return (button) => {
       if (button == null) return;
 
