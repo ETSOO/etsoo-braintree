@@ -435,14 +435,10 @@ async function createGooglePay(
     googleMerchantId: merchantId
   });
 
-  console.log("paymentInstance", paymentInstance);
-
   // Google payment client
   const paymentClient = new google.payments.api.PaymentsClient({
     environment
   });
-
-  console.log("paymentClient", paymentClient);
 
   // Google payment request
   const request = await paymentInstance.createPaymentDataRequest({
@@ -453,41 +449,27 @@ async function createGooglePay(
     }
   });
 
-  console.log("request", request);
-
   // Google payment isReadyToPay response
-  const response = await paymentClient.isReadyToPay({
-    apiVersion: version,
-    apiVersionMinor: 0,
-    allowedPaymentMethods: request.allowedPaymentMethods,
-    existingPaymentMethodRequired: true
-  });
+  paymentClient
+    .isReadyToPay({
+      apiVersion: request.apiVersion,
+      apiVersionMinor: request.apiVersionMinor,
+      allowedPaymentMethods: request.allowedPaymentMethods,
+      existingPaymentMethodRequired: true
+    })
+    .then(
+      (response) => {
+        console.log("response", response.result, response);
+      },
+      (reason) => {
+        console.log("onRejected", reason);
+      }
+    )
+    .catch((reason) => {
+      console.log("catch", reason);
+    });
 
-  console.log("response", response.result, response);
-
-  if (response.result) {
-    return (button) => {
-      if (button == null) return;
-
-      button.addEventListener("click", async (event) => {
-        if (onPaymentStart && onPaymentStart(event, button) === false) return;
-
-        try {
-          // Load payment data
-          const paymentData = await paymentClient.loadPaymentData(request);
-
-          // Parse payment data response
-          const paymentResponse = await paymentInstance.parseResponse(
-            paymentData
-          );
-
-          onPaymentRequestable(button, paymentResponse);
-        } catch (ex) {
-          onPaymentError(button, "googlePay", ex);
-        }
-      });
-    };
-  }
+  return undefined;
 }
 
 async function createPaypal(
