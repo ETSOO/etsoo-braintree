@@ -314,13 +314,9 @@ async function createApplePay(
   // Destruct
   const { totalLabel = "" } = options;
 
-  console.log("applePay", typeof applePay);
-
   // Create apple pay
   // https://braintree.github.io/braintree-web/current/module-braintree-web_apple-pay.html#.create
   const appPayInstance = await applePay.create({ client: clientInstance });
-
-  console.log("appPayInstance", appPayInstance);
 
   const paymentRequest = appPayInstance.createPaymentRequest({
     total: {
@@ -333,6 +329,8 @@ async function createApplePay(
     // all Apple Pay transactions as a best practice.
     requiredBillingContactFields: ["postalAddress"]
   });
+
+  console.log("paymentRequest", paymentRequest);
 
   return (button) => {
     if (button == null) return;
@@ -815,12 +813,6 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
                 globalThis as any
               ).ApplePaySession;
 
-              console.log(
-                "ApplePaySessionClass",
-                ApplePaySessionClass.supportsVersion(3),
-                ApplePaySessionClass.canMakePayments()
-              );
-
               if (
                 ApplePaySessionClass.supportsVersion(3) &&
                 ApplePaySessionClass.canMakePayments()
@@ -850,6 +842,8 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
           }
         }
 
+        console.log("applePay is done", applePay);
+
         if (card) {
           try {
             const cardRef = await createCard(
@@ -866,6 +860,8 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
             onError("card", error);
           }
         }
+
+        console.log("card is done", card);
 
         if (googlePay) {
           try {
@@ -892,6 +888,8 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
           }
         }
 
+        console.log("googlePay is done", googlePay);
+
         if (paypal) {
           try {
             const paypalRef = await createPaypal(
@@ -908,6 +906,8 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
             onError("paypal", error);
           }
         }
+
+        console.log("paypal is done", paypal);
 
         // Re-render
         setMethods(items);
