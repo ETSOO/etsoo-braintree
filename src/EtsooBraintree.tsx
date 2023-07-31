@@ -454,7 +454,6 @@ async function createGooglePay(
   const response = await new Promise<google.payments.api.IsReadyToPayResponse>(
     (resolve, reject) => {
       try {
-        console.log("start");
         paymentClient
           .isReadyToPay({
             apiVersion: request.apiVersion,
@@ -464,6 +463,7 @@ async function createGooglePay(
           })
           .then(
             (response) => {
+              console.log("resolve", response);
               resolve(response);
             },
             (reason) => {
@@ -472,13 +472,13 @@ async function createGooglePay(
             }
           )
           .catch((reason) => console.log("response", reason));
-
-        console.log("end");
       } catch (error) {
+        console.log("catch", error);
         reject(error);
       }
     }
   );
+  console.log("response", response);
 
   /*
   const response = await paymentClient.isReadyToPay({
