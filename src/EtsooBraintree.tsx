@@ -560,7 +560,7 @@ async function createPaypal(
 
     fundingSourceItems.forEach((fundingSource) => {
       // The Vault flow does not support Pay Later offers
-      // if (vaultOnly && fundingSource === "paylater") return;
+      // Library handles it, no necessary to do: if (vaultOnly && fundingSource === "paylater") return;
 
       try {
         const style =
