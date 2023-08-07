@@ -536,7 +536,7 @@ async function createPaypal(
     components: "buttons,funding-eligibility" as any,
     intent,
     debug,
-    vault,
+    vault: vault !== true,
     ...rest
   });
 
@@ -555,6 +555,9 @@ async function createPaypal(
     const isOneFundingSource = fundingSourceItems.length === 1;
 
     fundingSourceItems.forEach((fundingSource) => {
+      // The Vault flow does not support Pay Later offers
+      if (vault === true && fundingSource === "paylater") return;
+
       try {
         const style =
           buttonStyle == null
@@ -563,7 +566,7 @@ async function createPaypal(
             ? (buttonStyle as any)[fundingSource]
             : buttonStyle;
 
-        const flow = vault ? "vault" : "checkout";
+        const flow = vault === true ? "vault" : "checkout";
         const button = paypal.Buttons({
           style,
           fundingSource,
@@ -576,7 +579,8 @@ async function createPaypal(
               intent: intent as paypal.Intent, // Must match the intent passed in with loadPayPalSDK
 
               enableShippingAddress: true,
-              shippingAddressEditable: true
+              shippingAddressEditable: true,
+              requestBillingAgreement: vault !== false
             });
           },
           onApprove(data, actions) {

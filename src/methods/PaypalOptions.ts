@@ -10,7 +10,9 @@ export type PaypalOptions = {
   fundingSource?: string | string[];
   intent?: "authorize" | "capture" | "sale" | "tokenize";
   merchantAccountId?: string;
-  vault?: boolean;
+  // The Vault flow does not support Pay Later offers, https://developer.paypal.com/braintree/docs/guides/paypal/vault/javascript/v3/
+  // Checkout with Vault, https://developer.paypal.com/braintree/docs/guides/paypal/checkout-with-vault/javascript/v3/
+  vault?: boolean | "checkout";
   onDataCollected?: (dataCollector: DataCollector) => void;
 
   /**
