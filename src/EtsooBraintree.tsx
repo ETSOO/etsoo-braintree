@@ -532,6 +532,8 @@ async function createPaypal(
 
   const vaultOnly = vault === true;
 
+  console.log(vault, vaultOnly, intent, rest);
+
   // Enable or disable funding resources within the portal site
   // Not in configuration
   // https://developer.paypal.com/docs/checkout/standard/customize/standalone-buttons/
@@ -577,6 +579,8 @@ async function createPaypal(
           requestBillingAgreement: vault !== false,
           ...paymentOptions
         };
+
+        console.log("options", options);
 
         const button = paypal.Buttons({
           style,
