@@ -509,6 +509,7 @@ async function createPaypal(
     intent = "capture",
     vault = false,
     onDataCollected,
+    paymentOptions,
 
     ...rest
   } = options;
@@ -534,7 +535,7 @@ async function createPaypal(
   await payInstance.loadPayPalSDK({
     currency: amount.currency,
     components: "buttons,funding-eligibility" as any,
-    intent,
+    intent: intent as any,
     debug,
     vault: vault === true,
     ...rest
@@ -566,21 +567,25 @@ async function createPaypal(
             ? (buttonStyle as any)[fundingSource]
             : buttonStyle;
 
-        const flow = vault === true ? "vault" : "checkout";
         const button = paypal.Buttons({
           style,
           fundingSource,
+          // createOrder for the Checkout flow
           createOrder() {
             return payInstance.createPayment({
-              flow: flow as paypal.FlowType, // Required
+              flow: "checkout" as paypal.FlowType, // Required
               amount: amount.total, // Required
-              currency: amount.currency, // Required, must match the currency passed in with loadPayPalSDK
-
-              intent: intent as paypal.Intent, // Must match the intent passed in with loadPayPalSDK
-
-              enableShippingAddress: true,
-              shippingAddressEditable: true,
-              requestBillingAgreement: vault !== false
+              requestBillingAgreement: vault !== false,
+              ...paymentOptions
+            });
+          },
+          // createBillingAgreement for the Vault flow
+          createBillingAgreement: function () {
+            return payInstance.createPayment({
+              flow: "vault" as paypal.FlowType, // Required
+              amount: amount.total,
+              requestBillingAgreement: true,
+              ...paymentOptions
             });
           },
           onApprove(data, actions) {

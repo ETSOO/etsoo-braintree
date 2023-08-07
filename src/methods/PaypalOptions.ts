@@ -1,4 +1,7 @@
-import { DataCollector } from "braintree-web";
+import type {
+  DataCollector,
+  PayPalCheckoutCreatePaymentOptions
+} from "braintree-web";
 
 /**
  * Paypal options
@@ -8,12 +11,13 @@ export type PaypalOptions = {
   buttonStyle?: Record<string, any>;
   debug?: boolean;
   fundingSource?: string | string[];
-  intent?: "authorize" | "capture" | "sale" | "tokenize";
+  intent?: "authorize" | "capture" | "order" | "tokenize";
   merchantAccountId?: string;
   // The Vault flow does not support Pay Later offers, https://developer.paypal.com/braintree/docs/guides/paypal/vault/javascript/v3/
   // Checkout with Vault, https://developer.paypal.com/braintree/docs/guides/paypal/checkout-with-vault/javascript/v3/
   vault?: boolean | "checkout";
   onDataCollected?: (dataCollector: DataCollector) => void;
+  paymentOptions?: PayPalCheckoutCreatePaymentOptions;
 
   /**
    * Funding sources to disallow from showing in the checkout buttons.
