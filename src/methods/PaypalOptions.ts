@@ -11,7 +11,7 @@ export type PaypalOptions = {
   intent?: "authorize" | "capture" | "sale" | "tokenize";
   merchantAccountId?: string;
   vault?: boolean;
-  ondataCollected?: (dataCollector: DataCollector) => void;
+  onDataCollected?: (dataCollector: DataCollector) => void;
 
   /**
    * Funding sources to disallow from showing in the checkout buttons.

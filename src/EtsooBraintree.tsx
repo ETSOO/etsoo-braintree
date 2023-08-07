@@ -508,18 +508,18 @@ async function createPaypal(
     merchantAccountId,
     intent = "capture",
     vault = false,
-    ondataCollected,
+    onDataCollected,
 
     ...rest
   } = options;
 
   // Collecting device data
-  if (vault && ondataCollected) {
+  if (vault && onDataCollected) {
     dataCollector
       .create({
         client: clientInstance
       })
-      .then((dataCollectorInstance) => ondataCollected(dataCollectorInstance));
+      .then((dataCollectorInstance) => onDataCollected(dataCollectorInstance));
   }
 
   // https://braintree.github.io/braintree-web/current/module-braintree-web_paypal.html#.create
