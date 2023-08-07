@@ -506,8 +506,8 @@ async function createPaypal(
     debug = environment === "TEST",
     fundingSource = "paypal",
     merchantAccountId,
-    intent = "capture",
     vault = false,
+    intent = vault === true ? "tokenize" : "capture",
     onDataCollected,
     paymentOptions,
 
@@ -579,6 +579,7 @@ async function createPaypal(
                 return payInstance.createPayment({
                   flow: "checkout" as paypal.FlowType, // Required
                   amount: amount.total, // Required
+                  currency: amount.currency,
                   requestBillingAgreement: vault !== false,
                   ...paymentOptions
                 });
@@ -589,6 +590,7 @@ async function createPaypal(
                 return payInstance.createPayment({
                   flow: "vault" as paypal.FlowType, // Required
                   amount: amount.total,
+                  currency: amount.currency,
                   requestBillingAgreement: true,
                   ...paymentOptions
                 });
