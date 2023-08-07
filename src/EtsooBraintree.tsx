@@ -536,7 +536,7 @@ async function createPaypal(
     components: "buttons,funding-eligibility" as any,
     intent,
     debug,
-    vault: vault !== true,
+    vault: vault === true,
     ...rest
   });
 
