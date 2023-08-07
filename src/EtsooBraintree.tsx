@@ -3,6 +3,7 @@ import {
   Client,
   HostedFieldFieldOptions,
   LocalPaymentTypes,
+  PayPalCheckoutCreatePaymentOptions,
   ThreeDSecure,
   applePay,
   client,
@@ -569,6 +570,14 @@ async function createPaypal(
             ? (buttonStyle as any)[fundingSource]
             : buttonStyle;
 
+        const options: PayPalCheckoutCreatePaymentOptions = {
+          flow: (vaultOnly ? "vault" : "checkout") as paypal.FlowType,
+          amount: amount.total, // Required
+          currency: amount.currency,
+          requestBillingAgreement: vault !== false,
+          ...paymentOptions
+        };
+
         const button = paypal.Buttons({
           style,
           fundingSource,
@@ -576,24 +585,12 @@ async function createPaypal(
           createOrder: vaultOnly
             ? undefined
             : () => {
-                return payInstance.createPayment({
-                  flow: "checkout" as paypal.FlowType, // Required
-                  amount: amount.total, // Required
-                  currency: amount.currency,
-                  requestBillingAgreement: vault !== false,
-                  ...paymentOptions
-                });
+                return payInstance.createPayment(options);
               },
           // createBillingAgreement for the Vault flow
           createBillingAgreement: vaultOnly
             ? () => {
-                return payInstance.createPayment({
-                  flow: "vault" as paypal.FlowType, // Required
-                  amount: amount.total,
-                  currency: amount.currency,
-                  requestBillingAgreement: true,
-                  ...paymentOptions
-                });
+                return payInstance.createPayment(options);
               }
             : undefined,
           onApprove(data, actions) {
