@@ -529,6 +529,8 @@ async function createPaypal(
     merchantAccountId
   });
 
+  const vaultOnly = vault === true;
+
   // Enable or disable funding resources within the portal site
   // Not in configuration
   // https://developer.paypal.com/docs/checkout/standard/customize/standalone-buttons/
@@ -537,7 +539,7 @@ async function createPaypal(
     components: "buttons,funding-eligibility" as any,
     intent: intent as any,
     debug,
-    vault: vault === true,
+    vault: vaultOnly,
     ...rest
   });
 
@@ -557,7 +559,7 @@ async function createPaypal(
 
     fundingSourceItems.forEach((fundingSource) => {
       // The Vault flow does not support Pay Later offers
-      if (vault === true && fundingSource === "paylater") return;
+      if (vaultOnly && fundingSource === "paylater") return;
 
       try {
         const style =
@@ -571,23 +573,27 @@ async function createPaypal(
           style,
           fundingSource,
           // createOrder for the Checkout flow
-          createOrder() {
-            return payInstance.createPayment({
-              flow: "checkout" as paypal.FlowType, // Required
-              amount: amount.total, // Required
-              requestBillingAgreement: vault !== false,
-              ...paymentOptions
-            });
-          },
+          createOrder: vaultOnly
+            ? undefined
+            : () => {
+                return payInstance.createPayment({
+                  flow: "checkout" as paypal.FlowType, // Required
+                  amount: amount.total, // Required
+                  requestBillingAgreement: vault !== false,
+                  ...paymentOptions
+                });
+              },
           // createBillingAgreement for the Vault flow
-          createBillingAgreement: function () {
-            return payInstance.createPayment({
-              flow: "vault" as paypal.FlowType, // Required
-              amount: amount.total,
-              requestBillingAgreement: true,
-              ...paymentOptions
-            });
-          },
+          createBillingAgreement: vaultOnly
+            ? () => {
+                return payInstance.createPayment({
+                  flow: "vault" as paypal.FlowType, // Required
+                  amount: amount.total,
+                  requestBillingAgreement: true,
+                  ...paymentOptions
+                });
+              }
+            : undefined,
           onApprove(data, actions) {
             return payInstance.tokenizePayment(data).then(
               (payload) => {
