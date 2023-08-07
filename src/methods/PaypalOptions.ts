@@ -1,3 +1,5 @@
+import { DataCollector } from "braintree-web";
+
 /**
  * Paypal options
  * https://braintree.github.io/braintree-web/current/module-braintree-web_paypal.html#.create
@@ -9,6 +11,7 @@ export type PaypalOptions = {
   intent?: "authorize" | "capture" | "sale" | "tokenize";
   merchantAccountId?: string;
   vault?: boolean;
+  ondataCollected?: (dataCollector: DataCollector) => void;
 
   /**
    * Funding sources to disallow from showing in the checkout buttons.

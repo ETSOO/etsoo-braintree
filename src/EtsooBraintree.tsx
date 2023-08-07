@@ -6,6 +6,7 @@ import {
   ThreeDSecure,
   applePay,
   client,
+  dataCollector,
   googlePayment,
   hostedFields,
   localPayment,
@@ -507,9 +508,19 @@ async function createPaypal(
     merchantAccountId,
     intent = "capture",
     vault = false,
+    ondataCollected,
 
     ...rest
   } = options;
+
+  // Collecting device data
+  if (vault && ondataCollected) {
+    dataCollector
+      .create({
+        client: clientInstance
+      })
+      .then((dataCollectorInstance) => ondataCollected(dataCollectorInstance));
+  }
 
   // https://braintree.github.io/braintree-web/current/module-braintree-web_paypal.html#.create
   const payInstance = await paypalCheckout.create({
