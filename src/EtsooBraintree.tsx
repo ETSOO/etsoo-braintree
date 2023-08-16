@@ -314,7 +314,7 @@ async function createApplePay(
   onPaymentStart?: (event: MouseEvent, element: HTMLElement) => boolean | void
 ): Promise<React.RefCallback<HTMLElement> | undefined> {
   // Destruct
-  const { totalLabel = "" } = options;
+  const { totalLabel = "", displayName = "My App" } = options;
 
   // Create apple pay
   // https://braintree.github.io/braintree-web/current/module-braintree-web_apple-pay.html#.create
@@ -355,7 +355,8 @@ async function createApplePay(
         session.onvalidatemerchant = function (event) {
           appPayInstance
             .performValidation({
-              validationURL: event.validationURL
+              validationURL: event.validationURL,
+              displayName // is required, error message "Missing parameters: applePayWebSession.displayName"
             })
             .then(function (merchantSession) {
               session.completeMerchantValidation(merchantSession);
