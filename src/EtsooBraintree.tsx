@@ -20,17 +20,17 @@ import { CardOptions } from "./methods/CardOptions";
 import { EnvironmentType } from "./data/EnvironmentType";
 import { PaymentMethod, PaymentMethods } from "./data/PaymentMethods";
 import { PaymentAmount } from "./data/PaymentAmount";
-import {
-  HostedFieldsField,
-  HostedFieldsHostedFieldsFieldName
-} from "braintree-web/modules/hosted-fields";
 import { HostedFieldFieldType } from "./data/HostedFieldFieldType";
 import { PaymentPayload } from "./data/PaymentPayload";
 import { PaypalOptions } from "./methods/PaypalOptions";
 import { AlipayOptions } from "./methods/AlipayOptions";
 import { LocalPaymentOptions } from "./methods/LocalPaymentOptions";
 import { ApplePayOptions } from "./methods/ApplePayOptions";
-import { ThreeDSecureVerificationData } from "braintree-web/modules/three-d-secure";
+import {
+  HostedFieldsField,
+  HostedFieldsHostedFieldsFieldName
+} from "braintree-web/hosted-fields";
+import { ThreeDSecureVerificationData } from "braintree-web/three-d-secure";
 
 /**
  * Etsoo Braintree Payment Error type
@@ -270,7 +270,7 @@ async function createCard(
                 if (threeDSecureInstance) {
                   threeDSecureInstance
                     .verifyCard({
-                      amount: amount.total,
+                      amount: amount.total.toFixed(amount.fractionDigits ?? 2),
                       nonce: payload.nonce,
                       bin: payload.details.bin,
 
@@ -353,10 +353,9 @@ async function createApplePay(
         };
 
         session.onvalidatemerchant = function (event) {
-          applePay
+          appPayInstance
             .performValidation({
-              validationURL: event.validationURL,
-              displayName: "My Store"
+              validationURL: event.validationURL
             })
             .then(function (merchantSession) {
               session.completeMerchantValidation(merchantSession);
@@ -369,7 +368,7 @@ async function createApplePay(
         };
 
         session.onpaymentauthorized = function (event) {
-          applePay
+          appPayInstance
             .tokenize({
               token: event.payment.token
             })
