@@ -2,7 +2,7 @@ import {
   HostedFields,
   HostedFieldsField,
   HostedFieldsState
-} from "braintree-web/modules/hosted-fields";
+} from "braintree-web/hosted-fields";
 
 /**
  * Card payment options

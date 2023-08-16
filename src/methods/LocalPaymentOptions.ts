@@ -2,7 +2,7 @@ import {
   LocalPaymentAddress,
   LocalPaymentFallback,
   LocalPaymentStartData
-} from "braintree-web/modules/local-payment";
+} from "braintree-web/local-payment";
 import { PaymentMethod } from "../data/PaymentMethods";
 
 /**
