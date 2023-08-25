@@ -427,7 +427,12 @@ async function createGooglePay(
   // Load google payment script
   await loadGooglePayScript();
 
-  const { merchantId, totalPriceStatus = "FINAL", version = 2 } = options;
+  const {
+    buttonOptions,
+    merchantId,
+    totalPriceStatus = "FINAL",
+    version = 2
+  } = options;
 
   // Google payment instance
   // https://braintree.github.io/braintree-web/current/module-braintree-web_google-payment.html#.create
@@ -469,8 +474,13 @@ async function createGooglePay(
     return (button) => {
       if (button == null) return;
 
-      button.addEventListener("click", async (event) => {
-        if (onPaymentStart && onPaymentStart(event, button) === false) return;
+      const onClick = async (event: Event) => {
+        if (
+          onPaymentStart &&
+          event instanceof MouseEvent &&
+          onPaymentStart(event, button) === false
+        )
+          return;
 
         try {
           // Load payment data
@@ -485,7 +495,18 @@ async function createGooglePay(
         } catch (ex) {
           onPaymentError(button, "googlePay", ex);
         }
-      });
+      };
+
+      if (button instanceof HTMLButtonElement || button.hasChildNodes()) {
+        button.addEventListener("click", onClick);
+      } else {
+        button.append(
+          paymentClient.createButton({
+            onClick,
+            ...buttonOptions
+          })
+        );
+      }
     };
   }
 }
