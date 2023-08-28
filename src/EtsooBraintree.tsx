@@ -225,6 +225,13 @@ async function createCard(
           placeholder: ds.placeholder,
           type: ds.type
         };
+
+        if (ds.supportedCardBrands) {
+          (field as any).supportedCardBrands = JSON.parse(
+            ds.supportedCardBrands
+          );
+        }
+
         fields[key] = field;
         if (fieldSetup) fieldSetup(key, keyField, field);
       }
