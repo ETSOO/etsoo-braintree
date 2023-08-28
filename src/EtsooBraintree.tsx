@@ -226,9 +226,9 @@ async function createCard(
           type: ds.type
         };
 
-        if (ds.supportedCardBrands) {
+        if (ds.supportedcardbrands) {
           (field as any).supportedCardBrands = JSON.parse(
-            ds.supportedCardBrands
+            ds.supportedcardbrands
           );
         }
 
