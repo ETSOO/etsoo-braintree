@@ -536,7 +536,7 @@ async function createPaypal(
     fundingSource = "paypal",
     merchantAccountId,
     vault = false,
-    intent = vault === true ? "tokenize" : "capture",
+    intent = vault !== false ? "tokenize" : "capture",
     onDataCollected,
     paymentOptions,
 
