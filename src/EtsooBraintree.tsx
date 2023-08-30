@@ -536,7 +536,11 @@ async function createPaypal(
     fundingSource = "paypal",
     merchantAccountId,
     vault = false,
-    intent = vault !== false ? "tokenize" : "capture",
+    intent = vault === true
+      ? "tokenize"
+      : vault === "checkout"
+      ? "authorize"
+      : "capture",
     onDataCollected,
     paymentOptions,
 
@@ -603,7 +607,7 @@ async function createPaypal(
           amount: amount.total,
           currency: amount.currency,
           intent: intent as paypal.Intent,
-          requestBillingAgreement: vault !== false,
+          requestBillingAgreement: vaultOnly,
           ...paymentOptions
         };
 
