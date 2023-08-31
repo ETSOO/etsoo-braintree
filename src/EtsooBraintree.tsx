@@ -162,7 +162,10 @@ export type EtsooBraintreePros = {
   /**
    * Payment requestable callback
    */
-  onPaymentRequestable: (payload: PaymentPayload) => Promise<void>;
+  onPaymentRequestable: (
+    method: PaymentMethod,
+    payload: PaymentPayload
+  ) => Promise<void>;
 
   /**
    * Payment start callback
@@ -798,13 +801,12 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
   } = props;
 
   // Default callback
-  const onPaymentRequestableLocal = async (
-    button: HTMLElement,
-    payload: PaymentPayload
-  ) => {
-    await onPaymentRequestable(payload);
-    if (onPaymentEnd) onPaymentEnd(button);
-  };
+  const createPaymentCallback =
+    (method: PaymentMethod) =>
+    async (button: HTMLElement, payload: PaymentPayload) => {
+      await onPaymentRequestable(method, payload);
+      if (onPaymentEnd) onPaymentEnd(button);
+    };
 
   const onPaymentErrorLocal: PaymentErrorHandler = (button, method, reason) => {
     if (onPaymentError) onPaymentError(method, reason);
@@ -860,7 +862,7 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
               { ...alipay, method: "alipay" },
               environment,
               amount,
-              onPaymentRequestableLocal,
+              createPaymentCallback("alipay"),
               onPaymentErrorLocal,
               onPaymentStart
             );
@@ -887,7 +889,7 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
                   environment,
                   amount,
                   ApplePaySessionClass,
-                  onPaymentRequestableLocal,
+                  createPaymentCallback("applePay"),
                   onPaymentErrorLocal,
                   onPaymentStart
                 );
@@ -912,7 +914,7 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
               clientInstance,
               card,
               amount,
-              onPaymentRequestableLocal,
+              createPaymentCallback("card"),
               onPaymentErrorLocal,
               threeDSecureInstance,
               onPaymentStart
@@ -930,7 +932,7 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
               googlePay,
               environment,
               amount,
-              onPaymentRequestableLocal,
+              createPaymentCallback("googlePay"),
               onPaymentErrorLocal,
               onPaymentStart
             );
@@ -955,7 +957,7 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
               paypal,
               environment,
               amount,
-              onPaymentRequestableLocal,
+              createPaymentCallback("paypal"),
               onPaymentErrorLocal,
               onPaymentStart
             );

@@ -1,6 +1,6 @@
 {
   "name": "@etsoo/braintree",
-  "version": "1.0.97",
+  "version": "1.0.98",
   "description": "React components for Braintree",
   "main": "lib/cjs/index.js",
   "module": "lib/mjs/index.js",
@@ -49,7 +49,7 @@
   "license": "MIT",
   "devDependencies": {
     "@testing-library/react": "^14.0.0",
-    "@types/braintree-web": "^3.96.2",
+    "@types/braintree-web": "^3.96.3",
     "@types/googlepay": "^0.7.1",
     "@types/jest": "^29.5.4",
     "@types/react": "^18.2.21",
