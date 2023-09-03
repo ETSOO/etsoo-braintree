@@ -539,11 +539,6 @@ async function createPaypal(
     fundingSource = "paypal",
     merchantAccountId,
     vault = false,
-    intent = vault === true
-      ? "tokenize"
-      : vault === "checkout"
-      ? "authorize"
-      : "capture",
     onDataCollected,
     paymentOptions,
 
@@ -565,17 +560,15 @@ async function createPaypal(
     merchantAccountId
   });
 
-  const vaultOnly = vault === true;
-
   // Enable or disable funding resources within the portal site
   // Not in configuration
   // https://developer.paypal.com/docs/checkout/standard/customize/standalone-buttons/
   await payInstance.loadPayPalSDK({
     currency: amount.currency,
     components: "buttons,funding-eligibility" as any,
-    intent: intent as any,
+    // intent: intent as any,
     debug,
-    vault: vaultOnly,
+    vault,
     ...rest
   });
 
@@ -596,6 +589,14 @@ async function createPaypal(
     fundingSourceItems.forEach((fundingSource) => {
       // The Vault flow does not support Pay Later offers
       // Library handles it, no necessary to do: if (vaultOnly && fundingSource === "paylater") return;
+      // The Vault flow does not support Pay Later offers, https://developer.paypal.com/braintree/docs/guides/paypal/vault/javascript/v3/
+      // Checkout with Vault, https://developer.paypal.com/braintree/docs/guides/paypal/checkout-with-vault/javascript/v3/
+      const method: PaymentMethod =
+        fundingSource === "paypal"
+          ? "paypal"
+          : (`paypal-${fundingSource}` as PaymentMethod);
+
+      const vaultOnly = vault && fundingSource === "paypal";
 
       try {
         const style =
@@ -605,13 +606,17 @@ async function createPaypal(
             ? (buttonStyle as any)[fundingSource]
             : buttonStyle;
 
+        const fsOptions =
+          typeof paymentOptions === "function"
+            ? paymentOptions(fundingSource)
+            : paymentOptions;
+
         const options: PayPalCheckoutCreatePaymentOptions = {
-          flow: (vaultOnly ? "vault" : "checkout") as paypal.FlowType,
+          flow: vaultOnly ? paypal.FlowType.Vault : paypal.FlowType.Checkout,
           amount: amount.total,
           currency: amount.currency,
-          intent: intent as paypal.Intent,
-          requestBillingAgreement: vaultOnly,
-          ...paymentOptions
+          requestBillingAgreement: vault,
+          ...fsOptions
         };
 
         const button = paypal.Buttons({
@@ -636,7 +641,7 @@ async function createPaypal(
                 return payload;
               },
               (reason) => {
-                onPaymentError(container, "paypal", reason);
+                onPaymentError(container, method, reason);
                 return {} as paypal.AuthorizationResponse;
               }
             );
@@ -650,15 +655,15 @@ async function createPaypal(
           },
           onCancel(data) {
             const error = new EtsooBraintreeDataError(
-              "PayPal payment cancelled",
+              `${method} payment cancelled`,
               data
             );
             error.cause = "cancel";
 
-            onPaymentError(container, "paypal", error);
+            onPaymentError(container, method, error);
           },
           onError(err) {
-            onPaymentError(container, "paypal", err);
+            onPaymentError(container, method, err);
           }
         });
 
@@ -672,7 +677,7 @@ async function createPaypal(
               const error = new Error(
                 `No container ${containerId} defined for the funding source ${fundingSource}`
               );
-              onPaymentError(container, "paypal", error);
+              onPaymentError(container, method, error);
             }
           } else {
             const isEligible: boolean =
@@ -694,7 +699,7 @@ async function createPaypal(
           }
         }
       } catch (ex) {
-        onPaymentError(container, "paypal", ex);
+        onPaymentError(container, method, ex);
       }
     });
   };

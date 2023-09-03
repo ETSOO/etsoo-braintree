@@ -12,4 +12,4 @@ export type PaymentMethods = {
 /**
  * Payment method names
  */
-export type PaymentMethod = keyof PaymentMethods;
+export type PaymentMethod = keyof PaymentMethods | "paypal-paylater";
