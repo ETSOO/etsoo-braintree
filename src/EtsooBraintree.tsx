@@ -566,9 +566,8 @@ async function createPaypal(
   await payInstance.loadPayPalSDK({
     currency: amount.currency,
     components: "buttons,funding-eligibility" as any,
-    // intent: intent as any,
     debug,
-    vault,
+    //vault,
     ...rest
   });
 
@@ -598,6 +597,8 @@ async function createPaypal(
 
       const vaultOnly = vault && fundingSource === "paypal";
 
+      console.log("vaultOnly", vaultOnly, method);
+
       try {
         const style =
           buttonStyle == null
@@ -610,6 +611,8 @@ async function createPaypal(
           typeof paymentOptions === "function"
             ? paymentOptions(fundingSource)
             : paymentOptions;
+
+        console.log("fsOptions", fsOptions);
 
         const options: PayPalCheckoutCreatePaymentOptions = {
           flow: (vaultOnly ? "vault" : "checkout") as paypal.FlowType.Vault,

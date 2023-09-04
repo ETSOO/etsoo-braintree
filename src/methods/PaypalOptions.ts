@@ -3,6 +3,11 @@ import type {
   PayPalCheckoutCreatePaymentOptions
 } from "braintree-web";
 
+type PayPalCheckoutCreatePaymentOptionsOptional = Omit<
+  PayPalCheckoutCreatePaymentOptions,
+  "flow" | "amount" | "currency"
+>;
+
 /**
  * Paypal options
  * https://braintree.github.io/braintree-web/current/module-braintree-web_paypal.html#.create
@@ -15,8 +20,8 @@ export type PaypalOptions = {
   vault?: boolean;
   onDataCollected?: (dataCollector: DataCollector) => void;
   paymentOptions?:
-    | PayPalCheckoutCreatePaymentOptions
-    | ((fundingSource: string) => PayPalCheckoutCreatePaymentOptions);
+    | PayPalCheckoutCreatePaymentOptionsOptional
+    | ((fundingSource: string) => PayPalCheckoutCreatePaymentOptionsOptional);
 
   /**
    * Funding sources to disallow from showing in the checkout buttons.
