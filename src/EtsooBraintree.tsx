@@ -567,7 +567,7 @@ async function createPaypal(
     currency: amount.currency,
     components: "buttons,funding-eligibility" as any,
     debug,
-    //vault,
+    vault,
     ...rest
   });
 
