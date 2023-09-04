@@ -1,6 +1,7 @@
 import {
   ApplePaySession,
   Client,
+  DataCollector,
   HostedFieldFieldOptions,
   LocalPaymentTypes,
   PayPalCheckoutCreatePaymentOptions,
@@ -143,6 +144,12 @@ export type EtsooBraintreePros = {
    * Paypal
    */
   paypal?: PaypalOptions;
+
+  /**
+   * Data collected handler
+   * @param dataCollector Data collector
+   */
+  onDataCollected?: (dataCollector: DataCollector) => void;
 
   /**
    * Error handling
@@ -539,20 +546,10 @@ async function createPaypal(
     fundingSource = "paypal",
     merchantAccountId,
     vault = false,
-    onDataCollected,
     paymentOptions,
 
     ...rest
   } = options;
-
-  // Collecting device data
-  if (vault && onDataCollected) {
-    dataCollector
-      .create({
-        client: clientInstance
-      })
-      .then((dataCollectorInstance) => onDataCollected(dataCollectorInstance));
-  }
 
   // https://braintree.github.io/braintree-web/current/module-braintree-web_paypal.html#.create
   const payInstance = await paypalCheckout.create({
@@ -796,6 +793,7 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
     googlePay,
     paypal,
 
+    onDataCollected,
     onError = (reason) => console.log(reason),
     onLoading = () => "...",
     onPaymentError,
@@ -858,6 +856,17 @@ export function EtsooBraintree(props: EtsooBraintreePros) {
         if (threeDSecureInstance) {
           refs.current.threeDSecureInstance = threeDSecureInstance;
           threeDSecureInstance.on("lookup-complete", handler);
+        }
+
+        // Collecting device data
+        if (onDataCollected) {
+          dataCollector
+            .create({
+              client: clientInstance
+            })
+            .then((dataCollectorInstance) =>
+              onDataCollected(dataCollectorInstance)
+            );
         }
 
         if (alipay) {
