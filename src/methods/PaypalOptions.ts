@@ -17,7 +17,7 @@ export type PaypalOptions = {
   debug?: boolean;
   fundingSource?: string | string[];
   merchantAccountId?: string;
-  vault?: boolean;
+  vault?: boolean | "checkout";
   onDataCollected?: (dataCollector: DataCollector) => void;
   paymentOptions?:
     | PayPalCheckoutCreatePaymentOptionsOptional

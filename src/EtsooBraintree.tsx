@@ -560,6 +560,8 @@ async function createPaypal(
     merchantAccountId
   });
 
+  const vaultOnly = vault === true;
+
   // Enable or disable funding resources within the portal site
   // Not in configuration
   // https://developer.paypal.com/docs/checkout/standard/customize/standalone-buttons/
@@ -567,7 +569,7 @@ async function createPaypal(
     currency: amount.currency,
     components: "buttons,funding-eligibility" as any,
     debug,
-    vault,
+    vault: vaultOnly,
     ...rest
   });
 
@@ -595,10 +597,6 @@ async function createPaypal(
           ? "paypal"
           : (`paypal-${fundingSource}` as PaymentMethod);
 
-      const vaultOnly = vault && fundingSource === "paypal";
-
-      console.log("vaultOnly", vaultOnly, method);
-
       try {
         const style =
           buttonStyle == null
@@ -612,13 +610,12 @@ async function createPaypal(
             ? paymentOptions(fundingSource)
             : paymentOptions;
 
-        console.log("fsOptions", fsOptions);
-
         const options: PayPalCheckoutCreatePaymentOptions = {
           flow: (vaultOnly ? "vault" : "checkout") as paypal.FlowType.Vault,
           amount: amount.total,
           currency: amount.currency,
-          requestBillingAgreement: vault,
+          requestBillingAgreement:
+            vault !== false && fundingSource === "paypal",
           ...fsOptions
         };
 
