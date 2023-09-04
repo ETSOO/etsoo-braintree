@@ -612,7 +612,7 @@ async function createPaypal(
             : paymentOptions;
 
         const options: PayPalCheckoutCreatePaymentOptions = {
-          flow: vaultOnly ? paypal.FlowType.Vault : paypal.FlowType.Checkout,
+          flow: (vaultOnly ? "vault" : "checkout") as paypal.FlowType.Vault,
           amount: amount.total,
           currency: amount.currency,
           requestBillingAgreement: vault,
