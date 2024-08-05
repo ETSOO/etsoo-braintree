@@ -1,7 +1,6 @@
 import React from "react";
 import { EtsooBraintree } from "../src/index";
-import { render, screen } from "@testing-library/react";
-import { act } from "react-dom/test-utils";
+import { act, render, screen } from "@testing-library/react";
 
 it("Initialization tests", async () => {
   // Arrange
